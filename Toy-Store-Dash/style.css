@@ -1,0 +1,875 @@
+/* ============================================
+   RESET & GENERAL STYLES
+   ============================================ */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Comic Sans MS', 'Arial', sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    overflow-x: hidden;
+}
+
+.game-container {
+    width: 100%;
+    max-width: 1200px;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    position: relative;
+}
+
+/* ============================================
+   HEADER
+   ============================================ */
+
+.game-header {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.piggy-bank {
+    display: flex;
+    align-items: center;
+    background: white;
+    padding: 10px 20px;
+    border-radius: 50px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.piggy-icon {
+    font-size: 2em;
+    margin-right: 10px;
+    animation: wiggle 2s infinite;
+}
+
+@keyframes wiggle {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-5deg); }
+    75% { transform: rotate(5deg); }
+}
+
+.piggy-info {
+    text-align: left;
+}
+
+.piggy-label {
+    font-size: 0.8em;
+    color: #666;
+    font-weight: bold;
+}
+
+.piggy-amount {
+    font-size: 1.5em;
+    color: #27ae60;
+    font-weight: bold;
+}
+
+.game-title {
+    font-size: 2em;
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+.difficulty-selector {
+    background: white;
+    padding: 10px 15px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.difficulty-selector label {
+    font-weight: bold;
+    margin-right: 10px;
+    color: #333;
+}
+
+.difficulty-selector select {
+    font-size: 1em;
+    padding: 5px 10px;
+    border: 2px solid #667eea;
+    border-radius: 5px;
+    background: white;
+    cursor: pointer;
+}
+
+/* ============================================
+   SCREEN SYSTEM
+   ============================================ */
+
+.screen {
+    display: none;
+    padding: 40px;
+    min-height: 500px;
+    animation: fadeIn 0.5s ease-in;
+}
+
+.screen.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* ============================================
+   WELCOME SCREEN
+   ============================================ */
+
+.welcome-content {
+    text-align: center;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.welcome-content h2 {
+    font-size: 2.5em;
+    color: #667eea;
+    margin-bottom: 20px;
+}
+
+.welcome-text {
+    font-size: 1.3em;
+    color: #555;
+    margin-bottom: 30px;
+}
+
+.instructions {
+    background: #f7f7f7;
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 30px;
+    text-align: left;
+}
+
+.instructions h3 {
+    color: #f5576c;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.instructions ol {
+    font-size: 1.1em;
+    line-height: 1.8;
+    color: #333;
+    padding-left: 20px;
+}
+
+.instructions li {
+    margin-bottom: 10px;
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+
+.big-button {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-size: 1.5em;
+    font-weight: bold;
+    padding: 15px 40px;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    transition: all 0.3s ease;
+}
+
+.big-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+}
+
+.big-button:active {
+    transform: translateY(0);
+}
+
+.secondary-button {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+    font-size: 1.2em;
+    font-weight: bold;
+    padding: 12px 30px;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
+    transition: all 0.3s ease;
+    margin-top: 15px;
+}
+
+.secondary-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(245, 87, 108, 0.6);
+}
+
+/* ============================================
+   BUDGET REVEAL SCREEN
+   ============================================ */
+
+.budget-reveal {
+    text-align: center;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.budget-reveal h2 {
+    font-size: 2em;
+    color: #333;
+    margin-bottom: 30px;
+}
+
+.budget-bill {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    border: 5px dashed #0e7f6f;
+    border-radius: 20px;
+    padding: 40px;
+    margin: 30px auto;
+    max-width: 300px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    animation: billPulse 2s infinite;
+}
+
+@keyframes billPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.bill-amount {
+    font-size: 4em;
+    font-weight: bold;
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.bill-label {
+    font-size: 1.2em;
+    color: white;
+    margin-top: 10px;
+    font-weight: bold;
+}
+
+.budget-hint {
+    font-size: 1.2em;
+    color: #e74c3c;
+    font-weight: bold;
+    margin-bottom: 30px;
+}
+
+/* ============================================
+   SHOPPING SCREEN
+   ============================================ */
+
+.shopping-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.timer-container {
+    display: flex;
+    align-items: center;
+    background: #e74c3c;
+    padding: 10px 20px;
+    border-radius: 50px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.timer-icon {
+    font-size: 1.5em;
+    margin-right: 10px;
+    animation: shake 0.5s infinite;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+.timer-display {
+    font-size: 2em;
+    font-weight: bold;
+    color: white;
+    min-width: 50px;
+    text-align: center;
+}
+
+.timer-display.warning {
+    animation: pulse 0.5s infinite;
+    color: #ffeb3b;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+}
+
+.budget-reminder {
+    background: #3498db;
+    padding: 10px 20px;
+    border-radius: 50px;
+    color: white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.budget-label {
+    font-size: 0.9em;
+    font-weight: bold;
+}
+
+.budget-value {
+    font-size: 1.5em;
+    font-weight: bold;
+}
+
+.budget-bar-container {
+    flex: 1;
+    min-width: 200px;
+    height: 30px;
+    background: #ecf0f1;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.budget-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #27ae60, #f39c12, #e74c3c);
+    width: 0%;
+    transition: width 0.3s ease, background 0.3s ease;
+    border-radius: 15px;
+}
+
+.budget-bar.full {
+    background: #e74c3c;
+    animation: barFlash 0.5s infinite;
+}
+
+@keyframes barFlash {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* ============================================
+   TOY SHELF
+   ============================================ */
+
+.toy-shelf-container {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.shelf-title {
+    text-align: center;
+    font-size: 1.8em;
+    color: #667eea;
+    margin-bottom: 15px;
+}
+
+.curtains {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.curtain {
+    width: 50%;
+    background: #c0392b;
+    border: 3px solid #922b21;
+    transition: transform 1s ease;
+}
+
+.curtain.left {
+    transform-origin: left;
+}
+
+.curtain.right {
+    transform-origin: right;
+}
+
+.curtains.open .curtain.left {
+    transform: translateX(-100%);
+}
+
+.curtains.open .curtain.right {
+    transform: translateX(100%);
+}
+
+.toy-shelf {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 15px;
+    background: #f7f7f7;
+    padding: 20px;
+    border-radius: 15px;
+    min-height: 300px;
+    border: 3px solid #ddd;
+}
+
+.toy-item {
+    background: white;
+    border: 3px solid #667eea;
+    border-radius: 15px;
+    padding: 15px;
+    text-align: center;
+    cursor: grab;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.toy-item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+}
+
+.toy-item.dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+}
+
+.toy-icon {
+    font-size: 3em;
+    margin-bottom: 10px;
+}
+
+.toy-name {
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+    font-size: 0.9em;
+}
+
+.toy-price {
+    background: #27ae60;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+/* ============================================
+   SHOPPING CART
+   ============================================ */
+
+.cart-container {
+    background: #fff;
+    padding: 20px;
+    border-radius: 15px;
+    border: 3px dashed #667eea;
+}
+
+.cart-title {
+    text-align: center;
+    font-size: 1.5em;
+    color: #f5576c;
+    margin-bottom: 15px;
+}
+
+.cart {
+    min-height: 200px;
+    background: #f9f9f9;
+    border-radius: 10px;
+    padding: 15px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.cart.drag-over {
+    background: #e8f5e9;
+    border: 3px dashed #27ae60;
+}
+
+.cart-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: #999;
+    font-size: 1.2em;
+    padding: 50px;
+}
+
+.cart .toy-item {
+    border-color: #27ae60;
+}
+
+/* ============================================
+   CHECKOUT SCREEN
+   ============================================ */
+
+.checkout-content {
+    text-align: center;
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+.checkout-content h2 {
+    font-size: 2.5em;
+    color: #667eea;
+    margin-bottom: 20px;
+}
+
+.cashier {
+    font-size: 5em;
+    margin: 20px 0;
+    animation: wave 1s infinite;
+}
+
+@keyframes wave {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-10deg); }
+    75% { transform: rotate(10deg); }
+}
+
+.checkout-question {
+    font-size: 1.5em;
+    color: #333;
+    margin-bottom: 30px;
+    font-weight: bold;
+}
+
+.cart-equation {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 30px;
+    font-size: 1.3em;
+    min-height: 100px;
+}
+
+.equation-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: white;
+    border: 3px solid #667eea;
+    border-radius: 10px;
+    padding: 10px;
+}
+
+.equation-icon {
+    font-size: 2em;
+}
+
+.equation-price {
+    font-weight: bold;
+    color: #27ae60;
+    margin-top: 5px;
+}
+
+.equation-operator {
+    font-size: 2em;
+    font-weight: bold;
+    color: #333;
+}
+
+.answer-input-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.dollar-sign {
+    font-size: 3em;
+    font-weight: bold;
+    color: #27ae60;
+    margin-right: 10px;
+}
+
+.answer-input {
+    font-size: 3em;
+    padding: 10px 20px;
+    border: 4px solid #667eea;
+    border-radius: 10px;
+    width: 200px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.answer-input:focus {
+    outline: none;
+    border-color: #f5576c;
+    box-shadow: 0 0 10px rgba(245, 87, 108, 0.5);
+}
+
+/* ============================================
+   RESULT SCREEN
+   ============================================ */
+
+.result-content {
+    text-align: center;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.result-icon {
+    font-size: 6em;
+    margin-bottom: 20px;
+    animation: resultPop 0.5s ease;
+}
+
+@keyframes resultPop {
+    0% { transform: scale(0); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+.result-content h2 {
+    font-size: 2.5em;
+    margin-bottom: 20px;
+}
+
+.result-content h2.success {
+    color: #27ae60;
+}
+
+.result-content h2.error {
+    color: #e74c3c;
+}
+
+.result-details {
+    background: #f7f7f7;
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 30px;
+    font-size: 1.2em;
+    line-height: 1.8;
+}
+
+.result-details strong {
+    color: #667eea;
+}
+
+.toys-won-container {
+    margin-bottom: 30px;
+}
+
+.toys-won-container h3 {
+    color: #f5576c;
+    margin-bottom: 15px;
+}
+
+.toys-won {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.toys-won .toy-item {
+    cursor: default;
+}
+
+/* ============================================
+   TROPHY ROOM SCREEN
+   ============================================ */
+
+.trophy-content {
+    text-align: center;
+}
+
+.trophy-content h2 {
+    font-size: 2.5em;
+    color: #667eea;
+    margin-bottom: 20px;
+}
+
+.trophy-stats {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    margin-bottom: 30px;
+}
+
+.stat {
+    background: #f7f7f7;
+    padding: 15px 30px;
+    border-radius: 15px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.stat-label {
+    display: block;
+    font-weight: bold;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.stat-value {
+    display: block;
+    font-size: 2em;
+    font-weight: bold;
+    color: #667eea;
+}
+
+.trophy-room {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 15px;
+    background: #f7f7f7;
+    padding: 20px;
+    border-radius: 15px;
+    min-height: 300px;
+    margin-bottom: 30px;
+}
+
+.no-toys {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: #999;
+    font-size: 1.2em;
+    padding: 100px 20px;
+}
+
+.trophy-room .toy-item {
+    cursor: default;
+    border-color: #f39c12;
+    background: linear-gradient(135deg, #fff 0%, #fff8dc 100%);
+}
+
+/* ============================================
+   GAME OVER SCREEN
+   ============================================ */
+
+.game-over-content {
+    text-align: center;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.game-over-content h2 {
+    font-size: 3em;
+    color: #e74c3c;
+    margin-bottom: 20px;
+}
+
+.game-over-text {
+    font-size: 1.5em;
+    color: #333;
+    margin-bottom: 30px;
+}
+
+.final-stats {
+    background: #f7f7f7;
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+.final-stats h3 {
+    color: #667eea;
+    margin-bottom: 15px;
+}
+
+.final-stats p {
+    font-size: 1.3em;
+    color: #333;
+    margin: 10px 0;
+}
+
+/* ============================================
+   FEEDBACK MESSAGES
+   ============================================ */
+
+.feedback-message {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    background: white;
+    padding: 30px 50px;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    font-size: 2em;
+    font-weight: bold;
+    z-index: 1000;
+    text-align: center;
+    transition: all 0.3s ease;
+    pointer-events: none;
+}
+
+.feedback-message.show {
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.feedback-message.success {
+    color: #27ae60;
+    border: 5px solid #27ae60;
+}
+
+.feedback-message.error {
+    color: #e74c3c;
+    border: 5px solid #e74c3c;
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+@media (max-width: 768px) {
+    .game-header {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .game-title {
+        font-size: 1.5em;
+    }
+
+    .shopping-header {
+        flex-direction: column;
+    }
+
+    .toy-shelf {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    }
+
+    .cart-equation {
+        font-size: 1em;
+    }
+
+    .answer-input {
+        font-size: 2em;
+        width: 150px;
+    }
+
+    .trophy-stats {
+        flex-direction: column;
+        gap: 15px;
+    }
+}

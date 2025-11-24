@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎪 Toy Store Dash 🎪</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <!-- Header with Piggy Bank -->
+        <header class="game-header">
+            <div class="piggy-bank">
+                <div class="piggy-icon">🐷</div>
+                <div class="piggy-info">
+                    <div class="piggy-label">My Savings</div>
+                    <div class="piggy-amount" id="totalSavings">$100</div>
+                </div>
+            </div>
+            <h1 class="game-title">🎪 Toy Store Dash 🎪</h1>
+            <div class="difficulty-selector">
+                <label for="difficulty">Level:</label>
+                <select id="difficulty">
+                    <option value="1">Easy (1-5)</option>
+                    <option value="2">Medium (5-15)</option>
+                    <option value="3">Hard (10-30)</option>
+                </select>
+            </div>
+        </header>
+
+        <!-- Welcome Screen -->
+        <div id="welcomeScreen" class="screen active">
+            <div class="welcome-content">
+                <h2>🎮 Welcome to Toy Store Dash! 🎮</h2>
+                <p class="welcome-text">Fill your room with toys without going broke!</p>
+                <div class="instructions">
+                    <h3>How to Play:</h3>
+                    <ol>
+                        <li>🎫 You'll get a random budget each round</li>
+                        <li>🛍️ Drag toys to your cart before time runs out</li>
+                        <li>💰 Add up the prices correctly to keep your change</li>
+                        <li>🏆 Collect toys and grow your collection!</li>
+                    </ol>
+                </div>
+                <button id="startGameBtn" class="big-button">Start Game!</button>
+            </div>
+        </div>
+
+        <!-- Budget Reveal Screen -->
+        <div id="budgetScreen" class="screen">
+            <div class="budget-reveal">
+                <h2>Your Budget This Round:</h2>
+                <div class="budget-bill" id="budgetBill">
+                    <div class="bill-amount">$0</div>
+                    <div class="bill-label">Shopping Money</div>
+                </div>
+                <p class="budget-hint">Remember this number! Shop smart! 🧠</p>
+                <button id="startShoppingBtn" class="big-button">Let's Go Shopping!</button>
+            </div>
+        </div>
+
+        <!-- Shopping Screen -->
+        <div id="shoppingScreen" class="screen">
+            <!-- Timer and Budget Info -->
+            <div class="shopping-header">
+                <div class="timer-container">
+                    <div class="timer-icon">⏰</div>
+                    <div class="timer-display" id="timerDisplay">30</div>
+                </div>
+                <div class="budget-reminder">
+                    <div class="budget-label">Your Budget:</div>
+                    <div class="budget-value" id="budgetReminder">$0</div>
+                </div>
+                <div class="budget-bar-container">
+                    <div class="budget-bar" id="budgetBar"></div>
+                </div>
+            </div>
+
+            <!-- Toy Shelf -->
+            <div class="toy-shelf-container">
+                <h3 class="shelf-title">🎁 Toy Shelf 🎁</h3>
+                <div class="curtains" id="curtains">
+                    <div class="curtain left"></div>
+                    <div class="curtain right"></div>
+                </div>
+                <div class="toy-shelf" id="toyShelf">
+                    <!-- Toys will be generated here -->
+                </div>
+            </div>
+
+            <!-- Shopping Cart -->
+            <div class="cart-container">
+                <h3 class="cart-title">🛒 My Cart</h3>
+                <div class="cart" id="cart">
+                    <div class="cart-empty" id="cartEmpty">Drag toys here!</div>
+                </div>
+                <button id="checkoutBtn" class="big-button" style="display:none;">Ready to Checkout!</button>
+            </div>
+        </div>
+
+        <!-- Checkout Screen -->
+        <div id="checkoutScreen" class="screen">
+            <div class="checkout-content">
+                <h2>🧮 Checkout Time! 🧮</h2>
+                <div class="cashier">👨‍💼</div>
+                <p class="checkout-question">What is the total cost of your toys?</p>
+
+                <div class="cart-equation" id="cartEquation">
+                    <!-- Will show: Item $5 + Item $3 + Item $2 = ? -->
+                </div>
+
+                <div class="answer-input-container">
+                    <span class="dollar-sign">$</span>
+                    <input type="number" id="answerInput" class="answer-input" placeholder="?" autofocus>
+                </div>
+
+                <button id="submitAnswerBtn" class="big-button">Submit Answer</button>
+            </div>
+        </div>
+
+        <!-- Result Screen -->
+        <div id="resultScreen" class="screen">
+            <div class="result-content">
+                <div class="result-icon" id="resultIcon">🎉</div>
+                <h2 id="resultTitle">Great Job!</h2>
+                <div class="result-details" id="resultDetails"></div>
+                <div class="toys-won-container">
+                    <h3>Toys You Got:</h3>
+                    <div class="toys-won" id="toysWon"></div>
+                </div>
+                <button id="nextRoundBtn" class="big-button">Next Round!</button>
+                <button id="viewTrophyBtn" class="secondary-button">View Trophy Room</button>
+            </div>
+        </div>
+
+        <!-- Trophy Room Screen -->
+        <div id="trophyScreen" class="screen">
+            <div class="trophy-content">
+                <h2>🏆 My Trophy Room 🏆</h2>
+                <div class="trophy-stats">
+                    <div class="stat">
+                        <span class="stat-label">Total Toys:</span>
+                        <span class="stat-value" id="totalToys">0</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Rounds Played:</span>
+                        <span class="stat-value" id="roundsPlayed">0</span>
+                    </div>
+                </div>
+                <div class="trophy-room" id="trophyRoom">
+                    <div class="no-toys">No toys yet! Start playing to collect toys! 🎁</div>
+                </div>
+                <button id="closeTrophyBtn" class="big-button">Back to Game</button>
+            </div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="gameOverScreen" class="screen">
+            <div class="game-over-content">
+                <h2>😢 Oh No! 😢</h2>
+                <p class="game-over-text">You ran out of money!</p>
+                <div class="final-stats">
+                    <h3>Final Stats:</h3>
+                    <p>Toys Collected: <span id="finalToys">0</span></p>
+                    <p>Rounds Played: <span id="finalRounds">0</span></p>
+                </div>
+                <button id="restartGameBtn" class="big-button">Play Again!</button>
+            </div>
+        </div>
+
+        <!-- Feedback Messages -->
+        <div class="feedback-message" id="feedbackMessage"></div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
