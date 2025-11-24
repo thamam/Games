@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="128" height="128" version="1.1" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+ <rect width="128" height="128" fill="#2a2a3e"/>
+ <g transform="translate(0,-924.36)">
+  <!-- Tank body -->
+  <rect x="40" y="994.36" width="48" height="24" fill="#cc6600" rx="4"/>
+  <!-- Cannon -->
+  <rect x="64" y="986.36" width="32" height="6" fill="#996600" rx="2" transform="rotate(-30 80 989.36)"/>
+  <!-- Treads -->
+  <rect x="36" y="1018.36" width="56" height="8" fill="#663300" rx="4"/>
+  <!-- Explosion effect -->
+  <circle cx="96" cy="974.36" r="12" fill="#ff6600" opacity="0.8"/>
+  <circle cx="96" cy="974.36" r="8" fill="#ffcc00" opacity="0.9"/>
+  <!-- Terrain -->
+  <path d="M 0,1040.36 Q 20,1030.36 40,1035.36 T 80,1032.36 T 128,1038.36 L 128,1052.36 L 0,1052.36 Z" fill="#8b7355"/>
+ </g>
+</svg>

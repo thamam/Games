@@ -1,0 +1,282 @@
+extends Node2D
+
+## Main Game Scene - Orchestrates all game systems
+
+## Node references
+@onready var game_manager: GameManager = $GameManager
+@onready var terrain: Terrain = $Terrain
+@onready var tanks_container: Node2D = $Tanks
+@onready var projectiles_container: Node2D = $Projectiles
+@onready var ui: Control = $UI
+
+## UI elements
+var hud: Control
+var status_label: Label
+var player_info_label: Label
+var wind_indicator: Label
+var angle_label: Label
+var power_label: Label
+
+## Game state
+var current_weapon: Weapon
+var current_tank: Tank
+
+func _ready() -> void:
+	print("=================================")
+	print("  SCORCHED EARTH - Godot Remake  ")
+	print("=================================\n")
+
+	setup_ui()
+	setup_game()
+
+	# Start game after short delay
+	await get_tree().create_timer(1.0).timeout
+	start_new_game()
+
+func setup_ui() -> void:
+	"""Setup user interface"""
+	if not ui:
+		ui = Control.new()
+		ui.set_anchors_preset(Control.PRESET_FULL_RECT)
+		add_child(ui)
+
+	# HUD Container
+	hud = VBoxContainer.new()
+	hud.position = Vector2(10, 10)
+	ui.add_child(hud)
+
+	# Status label
+	status_label = Label.new()
+	status_label.add_theme_font_size_override("font_size", 16)
+	status_label.add_theme_color_override("font_color", Color.WHITE)
+	status_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	status_label.add_theme_constant_override("outline_size", 2)
+	hud.add_child(status_label)
+
+	# Player info
+	player_info_label = Label.new()
+	player_info_label.add_theme_font_size_override("font_size", 14)
+	player_info_label.add_theme_color_override("font_color", Color.YELLOW)
+	player_info_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	player_info_label.add_theme_constant_override("outline_size", 2)
+	hud.add_child(player_info_label)
+
+	# Wind indicator
+	wind_indicator = Label.new()
+	wind_indicator.add_theme_font_size_override("font_size", 14)
+	wind_indicator.add_theme_color_override("font_color", Color.CYAN)
+	wind_indicator.add_theme_color_override("font_outline_color", Color.BLACK)
+	wind_indicator.add_theme_constant_override("outline_size", 2)
+	hud.add_child(wind_indicator)
+
+	# Control hints
+	var hints = Label.new()
+	hints.text = "Controls: Arrow Keys (Angle/Power) | SPACE (Fire) | A/D (Move) | 1-9 (Select Weapon)"
+	hints.position = Vector2(10, get_viewport_rect().size.y - 30)
+	hints.add_theme_font_size_override("font_size", 12)
+	hints.add_theme_color_override("font_color", Color.WHITE)
+	hints.add_theme_color_override("font_outline_color", Color.BLACK)
+	hints.add_theme_constant_override("outline_size", 1)
+	ui.add_child(hints)
+
+func setup_game() -> void:
+	"""Initialize game systems"""
+	# Connect game manager signals
+	game_manager.turn_started.connect(_on_turn_started)
+	game_manager.turn_ended.connect(_on_turn_ended)
+	game_manager.game_over.connect(_on_game_over)
+	game_manager.round_started.connect(_on_round_started)
+
+	# Assign references
+	game_manager.terrain = terrain
+
+func start_new_game() -> void:
+	"""Start a new game"""
+	print("Starting new game...")
+
+	# Generate terrain
+	terrain.generate_terrain(randi())
+
+	# Setup game with 2 players (1 human, 1 AI)
+	var ai_players = [{"level": 1}]  # One medium AI
+	game_manager.setup_new_game(2, ai_players)
+
+	# Spawn tanks
+	spawn_tanks()
+
+	# Start first round
+	game_manager.start_round()
+
+	# Set default weapon
+	current_weapon = Weapon.create_missile()
+
+func spawn_tanks() -> void:
+	"""Spawn tanks for all players"""
+	game_manager.tanks.clear()
+
+	# Clear existing tanks
+	for child in tanks_container.get_children():
+		child.queue_free()
+
+	# Create tank for each player
+	for i in range(game_manager.num_players):
+		var tank = Tank.new()
+		var player = game_manager.players[i]
+
+		# Set tank properties
+		tank.set_player_info(i, player.name, player.color)
+		tank.game_manager = game_manager
+		tank.terrain = terrain
+
+		# Position tank
+		var spawn_pos = terrain.find_spawn_position(i, game_manager.num_players)
+		tank.global_position = spawn_pos
+
+		# Connect signals
+		tank.fired.connect(_on_tank_fired.bind(i))
+		tank.destroyed.connect(_on_tank_destroyed.bind(i))
+
+		# Add to scene
+		tanks_container.add_child(tank)
+		game_manager.tanks.append(tank)
+
+		print("Spawned %s at %.0f,%.0f" % [player.name, spawn_pos.x, spawn_pos.y])
+
+func _on_turn_started(player_index: int) -> void:
+	"""Handle turn start"""
+	current_tank = game_manager.tanks[player_index]
+	var player = game_manager.players[player_index]
+
+	status_label.text = "=== %s's Turn ===" % player.name
+	status_label.add_theme_color_override("font_color", player.color)
+
+	print("\n--- %s's Turn ---" % player.name)
+
+func _on_turn_ended(player_index: int) -> void:
+	"""Handle turn end"""
+	print("Turn ended for player %d" % player_index)
+
+func _on_round_started(round_number: int) -> void:
+	"""Handle round start"""
+	print("=== Round %d Started ===" % round_number)
+
+func _on_game_over(winner_index: int) -> void:
+	"""Handle game over"""
+	if winner_index >= 0:
+		var winner = game_manager.players[winner_index]
+		status_label.text = "🎉 %s WINS! 🎉" % winner.name
+		status_label.add_theme_color_override("font_color", winner.color)
+	else:
+		status_label.text = "DRAW!"
+
+	# Show restart option
+	await get_tree().create_timer(3.0).timeout
+	print("\nPress R to restart or ESC to quit")
+
+func _on_tank_fired(weapon_type: String, angle: float, power: float, player_index: int) -> void:
+	"""Handle tank firing weapon"""
+	var tank = game_manager.tanks[player_index]
+
+	# Create projectile
+	var projectile = current_weapon.create_projectile()
+	projectile.fired_by_player = player_index
+
+	# Add to scene
+	projectiles_container.add_child(projectile)
+
+	# Initialize projectile
+	var start_pos = tank.get_cannon_tip_position()
+	var start_velocity = tank.get_fire_velocity()
+
+	projectile.initialize(start_pos, start_velocity, player_index, game_manager, terrain)
+
+	# Connect projectile signals
+	projectile.exploded.connect(_on_projectile_exploded)
+
+	# Wait for projectile to finish
+	await projectile.tree_exited
+
+	# Small delay after explosion
+	await get_tree().create_timer(0.5).timeout
+
+	# End turn
+	game_manager.end_turn()
+
+func _on_projectile_exploded(position: Vector2, damage: int, radius: float) -> void:
+	"""Handle projectile explosion"""
+	print("Explosion at %.0f,%.0f (damage: %d, radius: %.0f)" % [
+		position.x, position.y, damage, radius
+	])
+
+func _on_tank_destroyed(player_index: int) -> void:
+	"""Handle tank destruction"""
+	print("Tank %d destroyed" % player_index)
+
+func _process(_delta: float) -> void:
+	"""Update game state and UI"""
+	update_ui()
+	handle_game_input()
+
+func update_ui() -> void:
+	"""Update UI elements"""
+	if game_manager.current_state == GameManager.GameState.PLAYING:
+		var player = game_manager.get_current_player()
+		if player.is_empty():
+			return
+
+		# Player info
+		player_info_label.text = "%s | Health: %d | Money: $%d | Shields: %d" % [
+			player.name,
+			player.health,
+			player.money,
+			player.shields
+		]
+
+		# Wind
+		var wind = game_manager.get_wind()
+		var wind_str = "←" if wind.x < 0 else "→"
+		wind_indicator.text = "Wind: %s %.0f" % [wind_str, abs(wind.x)]
+
+		# Tank status
+		if current_tank and current_tank.current_health > 0:
+			var status = current_tank.get_status_text()
+			# Update angle/power display
+			if status_label:
+				var lines = status_label.text.split("\n")
+				if lines.size() > 0:
+					status_label.text = lines[0] + "\n" + status
+
+func handle_game_input() -> void:
+	"""Handle global input"""
+	# Current player input
+	if game_manager.current_state == GameManager.GameState.PLAYING:
+		var player = game_manager.get_current_player()
+
+		if not player.is_empty() and not player.is_ai:
+			if current_tank and current_tank.current_health > 0:
+				current_tank.handle_input(get_process_delta_time())
+
+				# Weapon selection
+				for i in range(1, 10):
+					if Input.is_action_just_pressed("weapon_%d" % i):
+						select_weapon(i - 1)
+
+	# Restart game
+	if Input.is_action_just_pressed("ui_cancel"):
+		if game_manager.current_state == GameManager.GameState.GAME_OVER:
+			get_tree().reload_current_scene()
+
+func select_weapon(index: int) -> void:
+	"""Select weapon by index"""
+	var weapons = Weapon.get_all_weapons()
+	if index >= 0 and index < weapons.size():
+		current_weapon = weapons[index]
+		print("Selected weapon: %s" % current_weapon.weapon_name)
+
+func _input(event: InputEvent) -> void:
+	"""Handle input events"""
+	# Restart with R key
+	if event is InputEventKey and event.pressed and event.keycode == KEY_R:
+		if game_manager.current_state == GameManager.GameState.GAME_OVER:
+			print("\nRestarting game...")
+			get_tree().reload_current_scene()
