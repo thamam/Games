@@ -13,11 +13,8 @@ signal moved(new_position: Vector2)
 @export var movement_speed: float = 50.0
 @export var max_fuel: int = 100
 
-## Current State
-var current_health: int = 100
-var current_fuel: int = 0
-var current_shields: int = 0
-var has_parachute: bool = false
+## State (Note: GameManager is the single source of truth)
+## These are read from GameManager.players[player_index]
 var player_index: int = 0
 
 ## Cannon Control
@@ -42,10 +39,33 @@ const FALL_DAMAGE_THRESHOLD = 200.0  # Velocity threshold for damage
 
 func _ready() -> void:
 	setup_visuals()
-	current_health = max_health
 
 	# Physics properties
 	motion_mode = CharacterBody2D.MOTION_MODE_FLOATING
+
+## Helper functions to get state from GameManager (single source of truth)
+
+func get_player_data() -> Dictionary:
+	"""Get player data from GameManager"""
+	if game_manager:
+		return game_manager.get_player_by_index(player_index)
+	return {}
+
+func get_health() -> int:
+	"""Get current health from GameManager"""
+	return get_player_data().get("health", 0)
+
+func get_shields() -> int:
+	"""Get current shields from GameManager"""
+	return get_player_data().get("shields", 0)
+
+func get_fuel() -> int:
+	"""Get current fuel from GameManager"""
+	return get_player_data().get("fuel", 0)
+
+func get_parachute() -> bool:
+	"""Check if has parachute from GameManager"""
+	return get_player_data().get("parachutes", 0) > 0
 
 func setup_visuals() -> void:
 	"""Create tank visual representation"""
@@ -71,7 +91,7 @@ func setup_visuals() -> void:
 	health_bar.size = Vector2(30, 5)
 	health_bar.position = Vector2(-15, -20)
 	health_bar.max_value = max_health
-	health_bar.value = current_health
+	health_bar.value = max_health  # Will be updated from GameManager
 	health_bar.show_percentage = false
 	add_child(health_bar)
 
@@ -144,58 +164,63 @@ func fire(weapon_type: String = "missile") -> void:
 
 func move_tank(direction: float, delta: float) -> void:
 	"""Move tank left or right using fuel"""
-	if current_fuel <= 0:
+	var fuel = get_fuel()
+	if fuel <= 0:
 		return
 
 	var move_distance = direction * movement_speed * delta
 	global_position.x += move_distance
-	current_fuel = max(0, current_fuel - abs(int(move_distance)))
+
+	# Update fuel in GameManager
+	var fuel_used = abs(int(move_distance))
+	if game_manager:
+		var player_data = get_player_data()
+		player_data["fuel"] = max(0, fuel - fuel_used)
 
 	moved.emit(global_position)
 
 func apply_damage(amount: int) -> bool:
-	"""Apply damage to tank, returns true if destroyed"""
-	# Shields absorb damage first
-	if current_shields > 0:
-		var shield_absorbed = min(amount, current_shields)
-		current_shields -= shield_absorbed
-		amount -= shield_absorbed
-		print("Shield absorbed %d damage" % shield_absorbed)
+	"""Apply damage via GameManager (single source of truth)"""
+	if game_manager:
+		game_manager.apply_damage(player_index, amount)
 
-	# Apply remaining damage to health
-	current_health -= amount
-	current_health = max(0, current_health)
+		# Update health bar visual
+		update_health_bar()
 
-	# Update health bar
-	if health_bar:
-		health_bar.value = current_health
-
-	print("Tank %d health: %d" % [player_index, current_health])
-
-	if current_health <= 0:
-		destroy()
-		return true
+		return get_health() <= 0
 
 	return false
 
-func heal(amount: int) -> void:
-	"""Heal tank"""
-	current_health = min(max_health, current_health + amount)
+func update_health_bar() -> void:
+	"""Update health bar from GameManager state"""
 	if health_bar:
-		health_bar.value = current_health
+		health_bar.value = get_health()
+
+func heal(amount: int) -> void:
+	"""Heal tank via GameManager"""
+	if game_manager:
+		var player_data = get_player_data()
+		player_data["health"] = min(max_health, player_data.get("health", 0) + amount)
+		update_health_bar()
 
 func add_shields(amount: int) -> void:
-	"""Add shield points"""
-	current_shields += amount
-	print("Tank %d shields: %d" % [player_index, current_shields])
+	"""Add shield points via GameManager"""
+	if game_manager:
+		var player_data = get_player_data()
+		player_data["shields"] = player_data.get("shields", 0) + amount
+		print("Tank %d shields: %d" % [player_index, player_data["shields"]])
 
 func add_fuel(amount: int) -> void:
-	"""Add fuel for movement"""
-	current_fuel = min(max_fuel, current_fuel + amount)
+	"""Add fuel for movement via GameManager"""
+	if game_manager:
+		var player_data = get_player_data()
+		player_data["fuel"] = min(max_fuel, player_data.get("fuel", 0) + amount)
 
 func add_parachute() -> void:
-	"""Give tank a parachute"""
-	has_parachute = true
+	"""Give tank a parachute via GameManager"""
+	if game_manager:
+		var player_data = get_player_data()
+		player_data["parachutes"] = player_data.get("parachutes", 0) + 1
 
 func destroy() -> void:
 	"""Destroy this tank"""
@@ -215,7 +240,7 @@ func destroy() -> void:
 
 func _physics_process(delta: float) -> void:
 	"""Handle tank physics"""
-	if current_health <= 0:
+	if get_health() <= 0:
 		return
 
 	# Apply gravity
@@ -229,13 +254,18 @@ func _physics_process(delta: float) -> void:
 	if not was_on_ground and is_on_floor():
 		var impact_speed = abs(velocity.y)
 		if impact_speed > FALL_DAMAGE_THRESHOLD:
-			if has_parachute:
+			# Check parachute from GameManager state
+			if get_parachute():
 				print("Parachute saved Tank %d!" % player_index)
-				has_parachute = false
+				# Use parachute (decrement in GameManager)
+				if game_manager:
+					var player_data = get_player_data()
+					player_data["parachutes"] = max(0, player_data.get("parachutes", 0) - 1)
 			else:
 				var damage = int((impact_speed - FALL_DAMAGE_THRESHOLD) / 10)
 				print("Tank %d took %d fall damage" % [player_index, damage])
-				apply_damage(damage)
+				if game_manager:
+					game_manager.apply_damage(player_index, damage)
 
 	# Settle on terrain if on ground
 	if is_on_floor():
@@ -273,7 +303,7 @@ func get_status_text() -> String:
 	return "Angle: %.0f° | Power: %.0f%% | Health: %d | Shields: %d | Fuel: %d" % [
 		cannon_angle,
 		fire_power * 100,
-		current_health,
-		current_shields,
-		current_fuel
+		get_health(),
+		get_shields(),
+		get_fuel()
 	]

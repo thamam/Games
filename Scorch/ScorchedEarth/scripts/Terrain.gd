@@ -144,17 +144,24 @@ func destroy_terrain(position: Vector2, radius: float, add_dirt: bool = false) -
 				modified = true
 
 	if modified:
-		# Update height map
-		update_height_map()
+		# Update height map only for affected region
+		update_height_map(min_x, max_x)
 
 		# Update texture
 		terrain_texture.update(terrain_image)
 
 		terrain_modified.emit()
 
-func update_height_map() -> void:
-	"""Update height map based on current terrain image"""
-	for x in range(terrain_width):
+func update_height_map(start_x: int = 0, end_x: int = -1) -> void:
+	"""Update height map based on current terrain image, optionally for a specific range"""
+	if end_x == -1:
+		end_x = terrain_width - 1
+
+	# Clamp to valid range
+	start_x = clamp(start_x, 0, terrain_width - 1)
+	end_x = clamp(end_x, 0, terrain_width - 1)
+
+	for x in range(start_x, end_x + 1):
 		var height = 0
 		# Find first solid pixel from top
 		for y in range(terrain_height):

@@ -264,13 +264,29 @@ func create_explosion_effect() -> void:
 	"""Enhanced explosion for nuke"""
 	super.create_explosion_effect()
 
-	# Additional shockwave
+	# Additional shockwave - detached from projectile lifecycle
 	if terrain:
-		# Create multiple destruction waves
-		for i in range(3):
-			await get_tree().create_timer(0.1).timeout
-			var wave_radius = explosion_radius * (1.0 + i * 0.3)
-			terrain.destroy_terrain(global_position, wave_radius * 0.3, false)
+		var shockwave_timer = Timer.new()
+		shockwave_timer.wait_time = 0.1
+		shockwave_timer.one_shot = false
+
+		var shockwaves_done = 0
+		var shockwave_pos = global_position
+		var saved_terrain = terrain
+		var saved_radius = explosion_radius
+
+		shockwave_timer.timeout.connect(func():
+			shockwaves_done += 1
+			if not is_instance_valid(saved_terrain) or shockwaves_done > 3:
+				shockwave_timer.queue_free()
+				return
+
+			var wave_radius = saved_radius * (1.0 + shockwaves_done * 0.3)
+			saved_terrain.destroy_terrain(shockwave_pos, wave_radius * 0.3, false)
+		)
+
+		get_tree().root.add_child(shockwave_timer)
+		shockwave_timer.start()
 
 
 class_name MIRVProjectile

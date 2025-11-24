@@ -30,6 +30,7 @@ var current_state: GameState = GameState.MENU
 var current_player_index: int = 0
 var current_round: int = 1
 var turn_timer: float = 0.0
+var current_wind: Vector2 = Vector2.ZERO  # Consistent wind per round
 
 ## Player Data
 var players: Array[Dictionary] = []
@@ -72,7 +73,8 @@ func setup_new_game(player_count: int, ai_players: Array[Dictionary] = []) -> vo
 			"color": get_player_color(i),
 			"inventory": {},
 			"shields": 0,
-			"parachutes": 0
+			"parachutes": 0,
+			"fuel": 0
 		}
 		players.append(player_data)
 		active_players.append(i)
@@ -99,6 +101,10 @@ func get_player_color(index: int) -> Color:
 func start_round() -> void:
 	"""Start a new round"""
 	print("=== Round %d Started ===" % current_round)
+
+	# Set wind for this round
+	current_wind = Vector2(randf_range(-50, 50), 0)
+	print("Wind: %.1f" % current_wind.x)
 
 	# Apply interest to all players
 	for player in players:
@@ -162,8 +168,11 @@ func handle_ai_turn() -> void:
 		var accuracy = 0.3 + (difficulty * 0.3)  # 0=30%, 1=60%, 2=90% accuracy
 		angle += randf_range(-30.0, 30.0) * (1.0 - accuracy)
 
-		# Fire basic missile
-		fire_weapon("missile", angle, power)
+		# Set tank controls and fire (Main scene will handle projectile creation)
+		current_tank.set_cannon_angle(angle)
+		current_tank.set_fire_power(power)
+		current_player.shots_fired += 1
+		current_tank.fire("missile")
 
 func calculate_angle_to_target(from_tank: Tank, to_tank: Tank) -> float:
 	"""Calculate approximate angle to hit target (simplified)"""
@@ -189,21 +198,6 @@ func get_random_alive_player() -> int:
 		return -1
 
 	return valid_targets[randi() % valid_targets.size()]
-
-func fire_weapon(weapon_type: String, angle: float, power: float) -> void:
-	"""Fire a weapon from current player's tank"""
-	var current_player = players[current_player_index]
-	var current_tank = tanks[current_player_index]
-
-	print("%s fires %s at angle %.1f° with %.0f%% power" %
-		  [current_player.name, weapon_type, angle, power * 100])
-
-	current_player.shots_fired += 1
-
-	# Create projectile (will be implemented in Projectile system)
-	# For now, just end turn after a delay
-	await get_tree().create_timer(2.0).timeout
-	end_turn()
 
 func end_turn() -> void:
 	"""End the current player's turn"""
@@ -329,6 +323,5 @@ func get_player_by_index(index: int) -> Dictionary:
 	return {}
 
 func get_wind() -> Vector2:
-	"""Get current wind vector (will be implemented with weather system)"""
-	# For now, return random wind
-	return Vector2(randf_range(-50, 50), 0)
+	"""Get current wind vector"""
+	return current_wind
