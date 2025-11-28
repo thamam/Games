@@ -198,28 +198,136 @@ func apply_explosion_damage() -> void:
 				game_manager.apply_damage(i, actual_damage, fired_by_player)
 
 func create_explosion_effect() -> void:
-	"""Create visual explosion effect"""
-	# Simple particle effect using colored circles
-	var explosion_particles = Node2D.new()
-	explosion_particles.global_position = global_position
-	get_tree().root.add_child(explosion_particles)
+	"""Create visual explosion effect with particle system"""
+	var explosion_container = Node2D.new()
+	explosion_container.global_position = global_position
+	get_tree().root.add_child(explosion_container)
 
-	# Create expanding circles
-	for i in range(5):
-		var particle = ColorRect.new()
-		var size = (i + 1) * explosion_radius / 2.5
-		particle.size = Vector2(size, size)
-		particle.position = -particle.size / 2
-		particle.color = Color(1.0, 0.6, 0.0, 1.0 - (i * 0.15))
-		explosion_particles.add_child(particle)
+	# Main explosion flash (brief, bright center)
+	var flash = ColorRect.new()
+	var flash_size = explosion_radius * 2.0
+	flash.size = Vector2(flash_size, flash_size)
+	flash.position = -flash.size / 2
+	flash.color = Color(1.0, 0.9, 0.6, 0.9)  # Bright yellow-white
+	flash.z_index = 10
+	explosion_container.add_child(flash)
 
-	# Animate and remove
-	await get_tree().create_timer(0.3).timeout
-	explosion_particles.queue_free()
+	# Debris particles using CPUParticles2D
+	var debris = CPUParticles2D.new()
+	debris.emitting = true
+	debris.one_shot = true
+	debris.explosiveness = 0.9
+	debris.amount = int(explosion_radius * 2)  # More particles for bigger explosions
+	debris.lifetime = 0.8
+	debris.speed_scale = 1.5
+
+	# Emission
+	debris.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
+	debris.emission_sphere_radius = explosion_radius * 0.3
+
+	# Particle appearance
+	debris.color = Color(0.6, 0.4, 0.2, 1.0)  # Dirt color (will vary per particle)
+	debris.color_ramp = create_debris_color_ramp()
+
+	# Physics
+	debris.direction = Vector2(0, -1)
+	debris.spread = 180
+	debris.gravity = Vector2(0, 980)
+	debris.initial_velocity_min = explosion_radius * 8
+	debris.initial_velocity_max = explosion_radius * 12
+	debris.angular_velocity_min = -360
+	debris.angular_velocity_max = 360
+	debris.damping_min = 10
+	debris.damping_max = 30
+
+	# Scale (debris gets smaller over time)
+	debris.scale_amount_min = 2.0
+	debris.scale_amount_max = 4.0
+	debris.scale_amount_curve = create_debris_scale_curve()
+
+	explosion_container.add_child(debris)
+
+	# Smoke cloud particles
+	var smoke = CPUParticles2D.new()
+	smoke.emitting = true
+	smoke.one_shot = true
+	smoke.explosiveness = 0.7
+	smoke.amount = int(explosion_radius * 1.5)
+	smoke.lifetime = 1.2
+	smoke.speed_scale = 0.8
+
+	# Smoke emission
+	smoke.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
+	smoke.emission_sphere_radius = explosion_radius * 0.5
+
+	# Smoke appearance
+	smoke.color = Color(0.3, 0.2, 0.15, 0.6)  # Dark brown smoke
+	smoke.color_ramp = create_smoke_color_ramp()
+
+	# Smoke physics (rises and spreads)
+	smoke.direction = Vector2(0, -1)
+	smoke.spread = 45
+	smoke.gravity = Vector2(0, -100)  # Negative = rises
+	smoke.initial_velocity_min = explosion_radius * 2
+	smoke.initial_velocity_max = explosion_radius * 4
+	smoke.damping_min = 5
+	smoke.damping_max = 15
+
+	# Smoke expands over time
+	smoke.scale_amount_min = 4.0
+	smoke.scale_amount_max = 8.0
+	smoke.scale_amount_curve = create_smoke_scale_curve()
+
+	explosion_container.add_child(smoke)
+
+	# Animate flash fade out quickly
+	var flash_timer = get_tree().create_timer(0.05)
+	flash_timer.timeout.connect(func():
+		if is_instance_valid(flash):
+			flash.queue_free()
+	)
+
+	# Remove entire explosion container after particles finish
+	var cleanup_timer = get_tree().create_timer(1.5)
+	cleanup_timer.timeout.connect(func():
+		if is_instance_valid(explosion_container):
+			explosion_container.queue_free()
+	)
 
 	# Clean up trail
 	if trail:
 		trail.queue_free()
+
+func create_debris_color_ramp() -> Gradient:
+	"""Create color gradient for debris particles"""
+	var gradient = Gradient.new()
+	gradient.set_color(0, Color(0.6, 0.4, 0.2, 1.0))  # Dirt brown
+	gradient.set_color(1, Color(0.4, 0.3, 0.2, 0.0))  # Fade to transparent
+	return gradient
+
+func create_debris_scale_curve() -> Curve:
+	"""Create scale curve for debris (shrinks over time)"""
+	var curve = Curve.new()
+	curve.add_point(Vector2(0, 1.0))
+	curve.add_point(Vector2(0.5, 0.7))
+	curve.add_point(Vector2(1, 0.2))
+	return curve
+
+func create_smoke_color_ramp() -> Gradient:
+	"""Create color gradient for smoke particles"""
+	var gradient = Gradient.new()
+	gradient.set_color(0, Color(0.4, 0.3, 0.2, 0.7))  # Dark brown smoke
+	gradient.set_color(0.5, Color(0.5, 0.4, 0.3, 0.4))  # Lighter
+	gradient.set_color(1, Color(0.6, 0.5, 0.4, 0.0))  # Fade out
+	return gradient
+
+func create_smoke_scale_curve() -> Curve:
+	"""Create scale curve for smoke (expands over time)"""
+	var curve = Curve.new()
+	curve.add_point(Vector2(0, 0.3))
+	curve.add_point(Vector2(0.3, 0.8))
+	curve.add_point(Vector2(1, 1.5))
+	return curve
 
 ## Weapon-specific subclasses can override these methods
 
