@@ -4,13 +4,8 @@ class_name Projectile
 ## Projectile - Base class for all weapons
 ## Handles physics, collision, and explosion
 
-## Preload dependencies
-const GameManagerScript = preload("res://scripts/GameManager.gd")
-const TerrainScript = preload("res://scripts/Terrain.gd")
-const TankScript = preload("res://scripts/Tank.gd")
-
 signal exploded(position: Vector2, damage: int, radius: float)
-signal hit_tank(tank: Tank)
+signal hit_tank(tank)
 
 ## Projectile Properties
 @export var damage: int = 30
@@ -32,8 +27,8 @@ var wind_vector: Vector2 = Vector2.ZERO
 var has_exploded: bool = false
 
 ## References
-var game_manager: GameManager
-var terrain: Terrain
+var game_manager  # GameManager reference (untyped to avoid circular dependency)
+var terrain  # Terrain reference (untyped to avoid circular dependency)
 
 ## Visual Components
 var sprite: ColorRect
@@ -66,7 +61,7 @@ func setup_visuals() -> void:
 	trail.z_index = -1
 	get_parent().add_child(trail) if get_parent() else add_child(trail)
 
-func initialize(start_pos: Vector2, start_velocity: Vector2, player: int, mgr: GameManager, terr: Terrain) -> void:
+func initialize(start_pos: Vector2, start_velocity: Vector2, player: int, mgr, terr) -> void:  # mgr=GameManager, terr=Terrain (untyped to avoid circular dependency)
 	"""Initialize projectile with starting conditions"""
 	global_position = start_pos
 	velocity = start_velocity
@@ -239,7 +234,7 @@ func update_behavior(delta: float) -> void:
 
 ## Specific weapon types
 
-class_name MissileProjectile
+class MissileProjectile
 extends Projectile
 
 func _init() -> void:
@@ -248,7 +243,7 @@ func _init() -> void:
 	projectile_color = Color.YELLOW
 
 
-class_name HeavyMissileProjectile
+class HeavyMissileProjectile
 extends Projectile
 
 func _init() -> void:
@@ -257,7 +252,7 @@ func _init() -> void:
 	projectile_color = Color.ORANGE
 
 
-class_name NukeProjectile
+class NukeProjectile
 extends Projectile
 
 func _init() -> void:
@@ -294,7 +289,7 @@ func create_explosion_effect() -> void:
 		shockwave_timer.start()
 
 
-class_name MIRVProjectile
+class MIRVProjectile
 extends Projectile
 
 var split_into_submunitions: bool = false

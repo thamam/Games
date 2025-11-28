@@ -4,11 +4,6 @@ class_name GameManager
 ## Game Manager - Orchestrates the entire game flow
 ## Manages turns, players, game state, and win conditions
 
-## Preload dependencies
-const TerrainScript = preload("res://scripts/Terrain.gd")
-const TankScript = preload("res://scripts/Tank.gd")
-const ProjectileScript = preload("res://scripts/Projectile.gd")
-
 signal turn_started(player_index: int)
 signal turn_ended(player_index: int)
 signal game_over(winner_index: int)
@@ -42,9 +37,9 @@ var players: Array[Dictionary] = []
 var active_players: Array[int] = []  # Indices of alive players
 
 ## References
-var terrain: Terrain
-var tanks: Array[Tank] = []
-var current_projectile: Projectile = null
+var terrain  # Terrain reference (untyped to avoid circular dependency)
+var tanks: Array = []  # Array of Tank objects
+var current_projectile = null  # Current Projectile
 
 func _ready() -> void:
 	initialize_game()
@@ -179,7 +174,7 @@ func handle_ai_turn() -> void:
 		current_player.shots_fired += 1
 		current_tank.fire("missile")
 
-func calculate_angle_to_target(from_tank: Tank, to_tank: Tank) -> float:
+func calculate_angle_to_target(from_tank, to_tank) -> float:  # Tank parameters (untyped to avoid circular dependency)
 	"""Calculate approximate angle to hit target (simplified)"""
 	var dx = to_tank.global_position.x - from_tank.global_position.x
 	var dy = to_tank.global_position.y - from_tank.global_position.y

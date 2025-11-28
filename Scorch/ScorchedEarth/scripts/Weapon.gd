@@ -27,15 +27,16 @@ class_name Weapon
 @export var heat_seeking: bool = false
 @export var splits_count: int = 0
 
-func create_projectile() -> Projectile:
-	"""Create a projectile instance for this weapon"""
-	var projectile: Projectile
+func create_projectile():
+	"""Create a projectile instance for this weapon (untyped to avoid circular dependency)"""
+	var projectile  # Projectile instance
 
 	# Create specific projectile type
+	var ProjectileScript = load("res://scripts/Projectile.gd")
 	if is_mirv:
-		projectile = load("res://scripts/Projectile.gd").MIRVProjectile.new()
+		projectile = ProjectileScript.MIRVProjectile.new()
 	else:
-		projectile = Projectile.new()
+		projectile = ProjectileScript.new()
 
 	# Set properties
 	projectile.damage = damage

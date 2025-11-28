@@ -3,10 +3,6 @@ class_name Tank
 
 ## Tank - Player controllable tank with cannon, movement, and damage system
 
-## Preload dependencies
-const GameManagerScript = preload("res://scripts/GameManager.gd")
-const TerrainScript = preload("res://scripts/Terrain.gd")
-
 signal fired(weapon_type: String, angle: float, power: float)
 signal destroyed()
 signal moved(new_position: Vector2)
@@ -28,8 +24,8 @@ var min_angle: float = 0.0
 var max_angle: float = 180.0
 
 ## References
-var game_manager: GameManager
-var terrain: Terrain
+var game_manager  # GameManager reference (untyped to avoid circular dependency)
+var terrain  # Terrain reference (untyped to avoid circular dependency)
 
 ## Visual Components
 var body_rect: ColorRect

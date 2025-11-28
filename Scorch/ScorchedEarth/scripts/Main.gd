@@ -1,17 +1,11 @@
 extends Node2D
 
 ## Main Game Scene - Orchestrates all game systems
+## Note: All scripts use class_name declarations and are globally available
 
-## Preload scripts to ensure they're available
-const GameManagerScript = preload("res://scripts/GameManager.gd")
-const TerrainScript = preload("res://scripts/Terrain.gd")
-const TankScript = preload("res://scripts/Tank.gd")
-const ProjectileScript = preload("res://scripts/Projectile.gd")
-const WeaponScript = preload("res://scripts/Weapon.gd")
-
-## Node references
-@onready var game_manager: GameManager = $GameManager
-@onready var terrain: Terrain = $Terrain
+## Node references (untyped to avoid circular dependencies)
+@onready var game_manager = $GameManager  # GameManager
+@onready var terrain = $Terrain  # Terrain
 @onready var tanks_container: Node2D = $Tanks
 @onready var projectiles_container: Node2D = $Projectiles
 @onready var ui: Control = $UI
@@ -25,8 +19,8 @@ var angle_label: Label
 var power_label: Label
 
 ## Game state
-var current_weapon: Weapon
-var current_tank: Tank
+var current_weapon  # Weapon
+var current_tank  # Tank
 
 func _ready() -> void:
 	print("=================================")
@@ -115,7 +109,8 @@ func start_new_game() -> void:
 	game_manager.start_round()
 
 	# Set default weapon
-	current_weapon = Weapon.create_missile()
+	var WeaponScript = load("res://scripts/Weapon.gd")
+	current_weapon = WeaponScript.create_missile()
 
 func spawn_tanks() -> void:
 	"""Spawn tanks for all players"""
@@ -126,8 +121,9 @@ func spawn_tanks() -> void:
 		child.queue_free()
 
 	# Create tank for each player
+	var TankScript = load("res://scripts/Tank.gd")
 	for i in range(game_manager.num_players):
-		var tank = Tank.new()
+		var tank = TankScript.new()
 		var player = game_manager.players[i]
 
 		# Set tank properties
@@ -226,7 +222,8 @@ func _process(_delta: float) -> void:
 
 func update_ui() -> void:
 	"""Update UI elements"""
-	if game_manager.current_state == GameManager.GameState.PLAYING:
+	var GameManagerScript = load("res://scripts/GameManager.gd")
+	if game_manager.current_state == GameManagerScript.GameState.PLAYING:
 		var player = game_manager.get_current_player()
 		if player.is_empty():
 			return
@@ -255,8 +252,10 @@ func update_ui() -> void:
 
 func handle_game_input() -> void:
 	"""Handle global input"""
+	var GameManagerScript = load("res://scripts/GameManager.gd")
+
 	# Current player input
-	if game_manager.current_state == GameManager.GameState.PLAYING:
+	if game_manager.current_state == GameManagerScript.GameState.PLAYING:
 		var player = game_manager.get_current_player()
 
 		if not player.is_empty() and not player.is_ai:
@@ -270,12 +269,13 @@ func handle_game_input() -> void:
 
 	# Restart game
 	if Input.is_action_just_pressed("ui_cancel"):
-		if game_manager.current_state == GameManager.GameState.GAME_OVER:
+		if game_manager.current_state == GameManagerScript.GameState.GAME_OVER:
 			get_tree().reload_current_scene()
 
 func select_weapon(index: int) -> void:
 	"""Select weapon by index"""
-	var weapons = Weapon.get_all_weapons()
+	var WeaponScript = load("res://scripts/Weapon.gd")
+	var weapons = WeaponScript.get_all_weapons()
 	if index >= 0 and index < weapons.size():
 		current_weapon = weapons[index]
 		print("Selected weapon: %s" % current_weapon.weapon_name)
@@ -284,6 +284,7 @@ func _input(event: InputEvent) -> void:
 	"""Handle input events"""
 	# Restart with R key
 	if event is InputEventKey and event.pressed and event.keycode == KEY_R:
-		if game_manager.current_state == GameManager.GameState.GAME_OVER:
+		var GameManagerScript = load("res://scripts/GameManager.gd")
+		if game_manager.current_state == GameManagerScript.GameState.GAME_OVER:
 			print("\nRestarting game...")
 			get_tree().reload_current_scene()
