@@ -99,7 +99,7 @@ func start_new_game() -> void:
 	terrain.generate_terrain(randi())
 
 	# Setup game with 2 players (1 human, 1 AI)
-	var ai_players = [{"level": 1}]  # One medium AI
+	var ai_players: Array[Dictionary] = [{"level": 1}]  # One medium AI
 	game_manager.setup_new_game(2, ai_players)
 
 	# Spawn tanks
@@ -242,7 +242,7 @@ func update_ui() -> void:
 		wind_indicator.text = "Wind: %s %.0f" % [wind_str, abs(wind.x)]
 
 		# Tank status
-		if current_tank and current_tank.current_health > 0:
+		if current_tank and current_tank.get_health() > 0:
 			var status = current_tank.get_status_text()
 			# Update angle/power display
 			if status_label:
@@ -259,7 +259,7 @@ func handle_game_input() -> void:
 		var player = game_manager.get_current_player()
 
 		if not player.is_empty() and not player.is_ai:
-			if current_tank and current_tank.current_health > 0:
+			if current_tank and current_tank.get_health() > 0:
 				current_tank.handle_input(get_process_delta_time())
 
 				# Weapon selection

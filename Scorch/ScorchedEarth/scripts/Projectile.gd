@@ -130,8 +130,8 @@ func handle_collision(collision: KinematicCollision2D) -> void:
 	"""Handle collision with objects"""
 	var collider = collision.get_collider()
 
-	# Check if hit tank
-	if collider is Tank:
+	# Check if hit tank (duck typing to avoid circular dependency)
+	if collider and collider.has_method("get_health"):
 		explode()
 		hit_tank.emit(collider)
 		return
@@ -181,7 +181,7 @@ func apply_explosion_damage() -> void:
 
 	for i in range(game_manager.tanks.size()):
 		var tank = game_manager.tanks[i]
-		if not tank or tank.current_health <= 0:
+		if not tank or tank.get_health() <= 0:
 			continue
 
 		var distance = global_position.distance_to(tank.global_position)
@@ -234,112 +234,107 @@ func update_behavior(delta: float) -> void:
 
 ## Specific weapon types
 
-class MissileProjectile
-extends Projectile
-
-func _init() -> void:
-	damage = 30
-	explosion_radius = 30.0
-	projectile_color = Color.YELLOW
+class MissileProjectile extends Projectile:
+	func _init() -> void:
+		damage = 30
+		explosion_radius = 30.0
+		projectile_color = Color.YELLOW
 
 
-class HeavyMissileProjectile
-extends Projectile
-
-func _init() -> void:
-	damage = 70
-	explosion_radius = 50.0
-	projectile_color = Color.ORANGE
+class HeavyMissileProjectile extends Projectile:
+	func _init() -> void:
+		damage = 70
+		explosion_radius = 50.0
+		projectile_color = Color.ORANGE
 
 
-class NukeProjectile
-extends Projectile
+class NukeProjectile extends Projectile:
 
-func _init() -> void:
-	damage = 120
-	explosion_radius = 100.0
-	projectile_color = Color.RED
+	func _init() -> void:
+		damage = 120
+		explosion_radius = 100.0
+		projectile_color = Color.RED
 
-func create_explosion_effect() -> void:
-	"""Enhanced explosion for nuke"""
-	super.create_explosion_effect()
+	func create_explosion_effect() -> void:
+		"""Enhanced explosion for nuke"""
+		super.create_explosion_effect()
 
-	# Additional shockwave - detached from projectile lifecycle
-	if terrain:
-		var shockwave_timer = Timer.new()
-		shockwave_timer.wait_time = 0.1
-		shockwave_timer.one_shot = false
+		# Additional shockwave - detached from projectile lifecycle
+		if terrain:
+			var shockwave_timer = Timer.new()
+			shockwave_timer.wait_time = 0.1
+			shockwave_timer.one_shot = false
 
-		var shockwaves_done = 0
-		var shockwave_pos = global_position
-		var saved_terrain = terrain
-		var saved_radius = explosion_radius
+			var shockwaves_done = 0
+			var shockwave_pos = global_position
+			var saved_terrain = terrain
+			var saved_radius = explosion_radius
 
-		shockwave_timer.timeout.connect(func():
-			shockwaves_done += 1
-			if not is_instance_valid(saved_terrain) or shockwaves_done > 3:
-				shockwave_timer.queue_free()
-				return
+			shockwave_timer.timeout.connect(func():
+				shockwaves_done += 1
+				if not is_instance_valid(saved_terrain) or shockwaves_done > 3:
+					shockwave_timer.queue_free()
+					return
 
-			var wave_radius = saved_radius * (1.0 + shockwaves_done * 0.3)
-			saved_terrain.destroy_terrain(shockwave_pos, wave_radius * 0.3, false)
-		)
+				var wave_radius = saved_radius * (1.0 + shockwaves_done * 0.3)
+				saved_terrain.destroy_terrain(shockwave_pos, wave_radius * 0.3, false)
+			)
 
-		get_tree().root.add_child(shockwave_timer)
-		shockwave_timer.start()
+			get_tree().root.add_child(shockwave_timer)
+			shockwave_timer.start()
 
 
-class MIRVProjectile
-extends Projectile
+class MIRVProjectile extends Projectile:
 
-var split_into_submunitions: bool = false
-var submunition_count: int = 5
-var apex_reached: bool = false
-var apex_height: float = 0.0
+	var split_into_submunitions: bool = false
+	var submunition_count: int = 5
+	var apex_reached: bool = false
+	var apex_height: float = 0.0
 
-func _init() -> void:
-	damage = 20  # Each submunition
-	explosion_radius = 25.0
-	projectile_color = Color.CYAN
+	func _init() -> void:
+		damage = 20  # Each submunition
+		explosion_radius = 25.0
+		projectile_color = Color.CYAN
 
-func _physics_process(delta: float) -> void:
-	super._physics_process(delta)
+	func _physics_process(delta: float) -> void:
+		super._physics_process(delta)
 
-	# Check if reached apex (velocity becomes downward)
-	if not apex_reached and velocity.y > 0:
-		apex_reached = true
-		split_mirv()
+		# Check if reached apex (velocity becomes downward)
+		if not apex_reached and velocity.y > 0:
+			apex_reached = true
+			split_mirv()
 
-func split_mirv() -> void:
-	"""Split into multiple independent warheads"""
-	if split_into_submunitions or has_exploded:
-		return
+	func split_mirv() -> void:
+		"""Split into multiple independent warheads"""
+		if split_into_submunitions or has_exploded:
+			return
 
-	split_into_submunitions = true
-	print("MIRV splitting into %d warheads!" % submunition_count)
+		split_into_submunitions = true
+		print("MIRV splitting into %d warheads!" % submunition_count)
 
-	# Create submunitions
-	for i in range(submunition_count):
-		var submunition = Projectile.new()
-		submunition.damage = damage
-		submunition.explosion_radius = explosion_radius
-		submunition.projectile_color = projectile_color
+		# Create submunitions
+		var ProjectileScript = load("res://scripts/Projectile.gd")
+		for i in range(submunition_count):
+			var submunition = ProjectileScript.new()
+			submunition.damage = damage
+			submunition.explosion_radius = explosion_radius
+			submunition.projectile_color = projectile_color
 
-		# Spread submunitions
-		var spread_angle = -60 + (i * 120.0 / submunition_count)
-		var spread_velocity = Vector2(
-			cos(deg_to_rad(spread_angle)),
-			sin(deg_to_rad(spread_angle))
-		) * 150
+			# Spread submunitions
+			var spread_angle = -60 + (i * 120.0 / submunition_count)
+			var spread_velocity = Vector2(
+				cos(deg_to_rad(spread_angle)),
+				sin(deg_to_rad(spread_angle))
+			) * 150
 
-		get_parent().add_child(submunition)
-		submunition.initialize(
-			global_position,
-			velocity * 0.3 + spread_velocity,
-			fired_by_player,
-			game_manager,
-			terrain
-		)
+			get_parent().add_child(submunition)
+			submunition.initialize(
+				global_position,
+				velocity * 0.3 + spread_velocity,
+				fired_by_player,
+				game_manager,
+				terrain
+			)
 
-	# Remove parent projectile
-	queue_free()
+		# Remove parent projectile
+		queue_free()
