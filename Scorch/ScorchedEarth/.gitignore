@@ -32,6 +32,13 @@ builds/
 *.apk
 *.aab
 
+# Web build (optional - uncomment to track web builds in git)
+# web-build/*.html
+# web-build/*.js
+# web-build/*.wasm
+# web-build/*.pck
+# !web-build/.gitkeep
+
 # IDE specific
 .vscode/
 .idea/

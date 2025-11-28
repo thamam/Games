@@ -1,0 +1,27 @@
+# Godot project files (not needed for deployment)
+.godot/
+.import/
+*.import
+project.godot
+icon.svg
+
+# Source files (not needed for deployment)
+scripts/
+scenes/
+assets/
+resources/
+
+# Documentation (optional - remove if you want docs in deployment)
+README.md
+QUICKSTART.md
+GDD.md
+GAME_BRIEF.md
+DEPLOYMENT.md
+
+# Git files
+.git/
+.gitignore
+
+# Development files
+*.md
+!web-build/README.md

@@ -1,0 +1,10 @@
+# This directory will contain the exported HTML5 build
+#
+# After exporting from Godot, you'll have:
+# - index.html
+# - index.js
+# - index.wasm
+# - index.pck
+# - (optional) icon files
+#
+# These files will be deployed to Vercel
