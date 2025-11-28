@@ -98,9 +98,13 @@ func start_new_game() -> void:
 	# Generate terrain
 	terrain.generate_terrain(randi())
 
-	# Setup game with 2 players (1 human, 1 AI)
-	var ai_players: Array[Dictionary] = [{"level": 1}]  # One medium AI
-	game_manager.setup_new_game(2, ai_players)
+	# Setup game with 4 players (1 human, 3 AI) - GDD supports 2-10 players
+	var ai_players: Array[Dictionary] = [
+		{"level": 1},  # Medium AI
+		{"level": 1},  # Medium AI
+		{"level": 1}   # Medium AI
+	]
+	game_manager.setup_new_game(4, ai_players)
 
 	# Spawn tanks
 	spawn_tanks()

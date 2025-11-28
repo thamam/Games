@@ -10,7 +10,7 @@ signal terrain_modified()
 @export var terrain_width: int = 1280
 @export var terrain_height: int = 720
 @export var base_height: int = 500
-@export var roughness: float = 50.0
+@export var roughness: float = 80.0  # Increased for more dramatic terrain
 @export var terrain_color: Color = Color(0.6, 0.4, 0.2)  # Brown
 @export var sky_color: Color = Color(0.3, 0.5, 0.8)  # Blue
 
@@ -75,8 +75,8 @@ func generate_terrain(seed_value: int = -1) -> void:
 	print("Terrain generated: %dx%d" % [terrain_width, terrain_height])
 
 func midpoint_displacement() -> void:
-	"""Generate terrain using midpoint displacement algorithm"""
-	var segment_size = terrain_width / 4
+	"""Generate terrain using enhanced midpoint displacement algorithm"""
+	var segment_size = terrain_width / 2  # Start with larger segments for more variation
 	var variance = roughness
 
 	while segment_size > 1:
@@ -89,11 +89,16 @@ func midpoint_displacement() -> void:
 				# Calculate midpoint with random displacement
 				var mid_height = (left + right) / 2.0
 				mid_height += randf_range(-variance, variance)
-				mid_height = clamp(mid_height, 100, terrain_height - 100)
+
+				# Add occasional dramatic features (peaks and valleys)
+				if randf() < 0.15:  # 15% chance of dramatic feature
+					mid_height += randf_range(-variance * 2, variance * 2)
+
+				mid_height = clamp(mid_height, 50, terrain_height - 50)  # Allow higher/lower terrain
 				height_map[mid_index] = int(mid_height)
 
 		# Reduce variance and segment size
-		variance *= 0.5
+		variance *= 0.6  # Slower reduction for more variation
 		segment_size = segment_size / 2
 
 func smooth_terrain(iterations: int = 1) -> void:
