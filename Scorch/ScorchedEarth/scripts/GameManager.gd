@@ -74,7 +74,7 @@ func setup_new_game(player_count: int, ai_players: Array[Dictionary] = []) -> vo
 			"inventory": {},
 			"shields": 0,
 			"parachutes": 0,
-			"fuel": 0
+			"fuel": 100  # Starting fuel for testing (normally purchased from shop)
 		}
 		players.append(player_data)
 		active_players.append(i)
