@@ -17,6 +17,7 @@ var player_info_label: Label
 var wind_indicator: Label
 var angle_label: Label
 var power_label: Label
+var shop: Control  # Shop UI
 
 ## Game state
 var current_weapon  # Weapon
@@ -77,13 +78,20 @@ func setup_ui() -> void:
 
 	# Control hints
 	var hints = Label.new()
-	hints.text = "Controls: Arrow Keys (Angle/Power) | SPACE (Fire) | A/D (Move) | 1-9 (Select Weapon)"
+	hints.text = "Controls: Arrow Keys (Angle/Power) | SPACE (Fire) | A/D (Move) | 1-9 (Weapon) | TAB (Shop)"
 	hints.position = Vector2(10, get_viewport_rect().size.y - 30)
 	hints.add_theme_font_size_override("font_size", 12)
 	hints.add_theme_color_override("font_color", Color.WHITE)
 	hints.add_theme_color_override("font_outline_color", Color.BLACK)
 	hints.add_theme_constant_override("outline_size", 1)
 	ui.add_child(hints)
+
+	# Shop UI
+	var ShopScript = load("res://scripts/Shop.gd")
+	shop = ShopScript.new()
+	shop.purchase_completed.connect(_on_purchase_completed)
+	shop.shop_closed.connect(_on_shop_closed)
+	ui.add_child(shop)
 
 func setup_game() -> void:
 	"""Initialize game systems"""
@@ -169,6 +177,13 @@ func _on_turn_started(player_index: int) -> void:
 	status_label.add_theme_color_override("font_color", player.color)
 
 	print("\n--- %s's Turn ---" % player.name)
+
+	# Open shop for human players at turn start
+	if not player.is_ai:
+		# Small delay before showing shop
+		await get_tree().create_timer(0.3).timeout
+		if shop and is_instance_valid(shop):
+			shop.open_shop(player_index, game_manager)
 
 func _on_turn_ended(player_index: int) -> void:
 	"""Handle turn end"""
@@ -282,6 +297,11 @@ func handle_game_input() -> void:
 					if Input.is_action_just_pressed("weapon_%d" % i):
 						select_weapon(i - 1)
 
+				# Shop toggle (TAB key)
+				if Input.is_key_pressed(KEY_TAB):
+					if shop and is_instance_valid(shop) and not shop.visible:
+						shop.open_shop(game_manager.current_turn, game_manager)
+
 	# Restart game
 	if Input.is_action_just_pressed("ui_cancel"):
 		if game_manager.current_state == GameManagerScript.GameState.GAME_OVER:
@@ -303,3 +323,17 @@ func _input(event: InputEvent) -> void:
 		if game_manager.current_state == GameManagerScript.GameState.GAME_OVER:
 			print("\nRestarting game...")
 			get_tree().reload_current_scene()
+
+func _on_purchase_completed(item_type: String, item_id: String) -> void:
+	"""Handle purchase completion"""
+	print("Purchase completed: %s (%s)" % [item_id, item_type])
+
+	# Update current weapon if weapon was purchased
+	if item_type == "weapon":
+		var WeaponScript = load("res://scripts/Weapon.gd")
+		current_weapon = WeaponScript.get_weapon_by_id(item_id)
+		print("Current weapon set to: %s" % current_weapon.weapon_name)
+
+func _on_shop_closed() -> void:
+	"""Handle shop close"""
+	print("Shop closed, ready for turn")
