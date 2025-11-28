@@ -69,6 +69,13 @@ func get_parachute() -> bool:
 
 func setup_visuals() -> void:
 	"""Create tank visual representation"""
+	# Collision shape (must be added first for CharacterBody2D)
+	var collision_shape = CollisionShape2D.new()
+	var shape = RectangleShape2D.new()
+	shape.size = TANK_SIZE
+	collision_shape.shape = shape
+	add_child(collision_shape)
+
 	# Tank body
 	body_rect = ColorRect.new()
 	body_rect.size = TANK_SIZE

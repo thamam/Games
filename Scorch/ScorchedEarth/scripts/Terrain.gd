@@ -69,6 +69,9 @@ func generate_terrain(seed_value: int = -1) -> void:
 
 	terrain_sprite.texture = terrain_texture
 
+	# Create collision for terrain
+	setup_collision()
+
 	print("Terrain generated: %dx%d" % [terrain_width, terrain_height])
 
 func midpoint_displacement() -> void:
@@ -114,6 +117,36 @@ func smooth_terrain(iterations: int = 1) -> void:
 
 		height_map = new_heights
 
+func setup_collision() -> void:
+	"""Create collision shape for terrain based on height map"""
+	# Remove old collision if exists
+	if collision_shape:
+		collision_shape.queue_free()
+
+	# Create StaticBody2D for terrain collision
+	var static_body = StaticBody2D.new()
+	add_child(static_body)
+
+	# Create collision polygon
+	collision_shape = CollisionPolygon2D.new()
+	static_body.add_child(collision_shape)
+
+	# Build polygon from height map
+	var polygon_points = PackedVector2Array()
+
+	# Start from bottom-left
+	polygon_points.append(Vector2(0, terrain_height))
+
+	# Follow the terrain surface
+	for x in range(terrain_width):
+		polygon_points.append(Vector2(x, height_map[x]))
+
+	# Complete the polygon: right edge down, bottom edge left
+	polygon_points.append(Vector2(terrain_width - 1, terrain_height))
+
+	collision_shape.polygon = polygon_points
+	print("Collision shape created with %d points" % polygon_points.size())
+
 func destroy_terrain(position: Vector2, radius: float, add_dirt: bool = false) -> void:
 	"""Destroy (or add) terrain at position with given radius"""
 	var center_x = int(position.x)
@@ -150,6 +183,9 @@ func destroy_terrain(position: Vector2, radius: float, add_dirt: bool = false) -
 		# Update texture
 		terrain_texture.update(terrain_image)
 
+		# Update collision
+		setup_collision()
+
 		terrain_modified.emit()
 
 func update_height_map(start_x: int = 0, end_x: int = -1) -> void:
@@ -166,7 +202,7 @@ func update_height_map(start_x: int = 0, end_x: int = -1) -> void:
 		# Find first solid pixel from top
 		for y in range(terrain_height):
 			var pixel = terrain_image.get_pixel(x, y)
-			if pixel.a > 0.5 and pixel.distance_to(terrain_color) < 0.1:
+			if pixel.a > 0.5 and pixel.is_equal_approx(terrain_color):
 				height = y
 				break
 		height_map[x] = height if height > 0 else terrain_height
@@ -187,7 +223,8 @@ func is_solid_at(position: Vector2) -> bool:
 		return false
 
 	var pixel = terrain_image.get_pixel(x, y)
-	return pixel.distance_to(terrain_color) < 0.1
+	# Check if pixel is terrain color (not sky)
+	return pixel.is_equal_approx(terrain_color)
 
 func get_surface_normal(x: float) -> Vector2:
 	"""Get surface normal at x position for physics"""
