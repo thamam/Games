@@ -37,9 +37,9 @@ var players: Array[Dictionary] = []
 var active_players: Array[int] = []  # Indices of alive players
 
 ## References
-var terrain: Terrain
-var tanks: Array[Tank] = []
-var current_projectile: Projectile = null
+var terrain  # Terrain reference (untyped to avoid circular dependency)
+var tanks: Array = []  # Array of Tank objects
+var current_projectile = null  # Current Projectile
 
 func _ready() -> void:
 	initialize_game()
@@ -74,7 +74,7 @@ func setup_new_game(player_count: int, ai_players: Array[Dictionary] = []) -> vo
 			"inventory": {},
 			"shields": 0,
 			"parachutes": 0,
-			"fuel": 0
+			"fuel": 100  # Starting fuel for testing (normally purchased from shop)
 		}
 		players.append(player_data)
 		active_players.append(i)
@@ -174,7 +174,7 @@ func handle_ai_turn() -> void:
 		current_player.shots_fired += 1
 		current_tank.fire("missile")
 
-func calculate_angle_to_target(from_tank: Tank, to_tank: Tank) -> float:
+func calculate_angle_to_target(from_tank, to_tank) -> float:  # Tank parameters (untyped to avoid circular dependency)
 	"""Calculate approximate angle to hit target (simplified)"""
 	var dx = to_tank.global_position.x - from_tank.global_position.x
 	var dy = to_tank.global_position.y - from_tank.global_position.y

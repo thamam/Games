@@ -27,15 +27,16 @@ class_name Weapon
 @export var heat_seeking: bool = false
 @export var splits_count: int = 0
 
-func create_projectile() -> Projectile:
-	"""Create a projectile instance for this weapon"""
-	var projectile: Projectile
+func create_projectile():
+	"""Create a projectile instance for this weapon (untyped to avoid circular dependency)"""
+	var projectile  # Projectile instance
 
 	# Create specific projectile type
+	var ProjectileScript = load("res://scripts/Projectile.gd")
 	if is_mirv:
-		projectile = load("res://scripts/Projectile.gd").MIRVProjectile.new()
+		projectile = ProjectileScript.MIRVProjectile.new()
 	else:
-		projectile = Projectile.new()
+		projectile = ProjectileScript.new()
 
 	# Set properties
 	projectile.damage = damage
@@ -51,7 +52,7 @@ func create_projectile() -> Projectile:
 
 ## Weapon Database - Static weapon definitions
 
-static func get_all_weapons() -> Array[Weapon]:
+static func get_all_weapons() -> Array:
 	"""Get all available weapons"""
 	return [
 		create_baby_missile(),
@@ -69,7 +70,7 @@ static func get_all_weapons() -> Array[Weapon]:
 		create_dirt_charge(),
 	]
 
-static func get_weapon_by_id(id: String) -> Weapon:
+static func get_weapon_by_id(id: String):
 	"""Get weapon by ID"""
 	var weapons = get_all_weapons()
 	for weapon in weapons:
@@ -79,8 +80,9 @@ static func get_weapon_by_id(id: String) -> Weapon:
 
 ## Individual Weapon Definitions
 
-static func create_baby_missile() -> Weapon:
-	var w = Weapon.new()
+static func create_baby_missile():
+	var WeaponScript = load("res://scripts/Weapon.gd")
+	var w = WeaponScript.new()
 	w.weapon_id = "baby_missile"
 	w.weapon_name = "Baby Missile"
 	w.description = "Small, cheap projectile"
@@ -90,8 +92,9 @@ static func create_baby_missile() -> Weapon:
 	w.icon_color = Color.YELLOW
 	return w
 
-static func create_missile() -> Weapon:
-	var w = Weapon.new()
+static func create_missile():
+	var WeaponScript = load("res://scripts/Weapon.gd")
+	var w = WeaponScript.new()
 	w.weapon_id = "missile"
 	w.weapon_name = "Missile"
 	w.description = "Standard projectile"
@@ -101,8 +104,9 @@ static func create_missile() -> Weapon:
 	w.icon_color = Color.ORANGE
 	return w
 
-static func create_heavy_missile() -> Weapon:
-	var w = Weapon.new()
+static func create_heavy_missile():
+	var WeaponScript = load("res://scripts/Weapon.gd")
+	var w = WeaponScript.new()
 	w.weapon_id = "heavy_missile"
 	w.weapon_name = "Heavy Missile"
 	w.description = "Large explosive"
@@ -112,8 +116,9 @@ static func create_heavy_missile() -> Weapon:
 	w.icon_color = Color.DARK_ORANGE
 	return w
 
-static func create_baby_nuke() -> Weapon:
-	var w = Weapon.new()
+static func create_baby_nuke():
+	var WeaponScript = load("res://scripts/Weapon.gd")
+	var w = WeaponScript.new()
 	w.weapon_id = "baby_nuke"
 	w.weapon_name = "Baby Nuke"
 	w.description = "Medium nuclear weapon"
@@ -123,8 +128,9 @@ static func create_baby_nuke() -> Weapon:
 	w.icon_color = Color.RED
 	return w
 
-static func create_nuke() -> Weapon:
-	var w = Weapon.new()
+static func create_nuke():
+	var WeaponScript = load("res://scripts/Weapon.gd")
+	var w = WeaponScript.new()
 	w.weapon_id = "nuke"
 	w.weapon_name = "Nuke"
 	w.description = "Massive destruction"
@@ -134,8 +140,9 @@ static func create_nuke() -> Weapon:
 	w.icon_color = Color.DARK_RED
 	return w
 
-static func create_mirv() -> Weapon:
-	var w = Weapon.new()
+static func create_mirv():
+	var WeaponScript = load("res://scripts/Weapon.gd")
+	var w = WeaponScript.new()
 	w.weapon_id = "mirv"
 	w.weapon_name = "MIRV"
 	w.description = "Splits into 5 warheads"
@@ -147,8 +154,9 @@ static func create_mirv() -> Weapon:
 	w.icon_color = Color.CYAN
 	return w
 
-static func create_funky_bomb() -> Weapon:
-	var w = Weapon.new()
+static func create_funky_bomb():
+	var WeaponScript = load("res://scripts/Weapon.gd")
+	var w = WeaponScript.new()
 	w.weapon_id = "funky_bomb"
 	w.weapon_name = "Funky Bomb"
 	w.description = "Chaotic cluster bomb"
@@ -160,8 +168,9 @@ static func create_funky_bomb() -> Weapon:
 	w.icon_color = Color.MAGENTA
 	return w
 
-static func create_napalm() -> Weapon:
-	var w = Weapon.new()
+static func create_napalm():
+	var WeaponScript = load("res://scripts/Weapon.gd")
+	var w = WeaponScript.new()
 	w.weapon_id = "napalm"
 	w.weapon_name = "Napalm"
 	w.description = "Incendiary bouncing weapon"
@@ -173,8 +182,9 @@ static func create_napalm() -> Weapon:
 	w.icon_color = Color(1.0, 0.5, 0.0)
 	return w
 
-static func create_roller() -> Weapon:
-	var w = Weapon.new()
+static func create_roller():
+	var WeaponScript = load("res://scripts/Weapon.gd")
+	var w = WeaponScript.new()
 	w.weapon_id = "roller"
 	w.weapon_name = "Roller"
 	w.description = "Rolls down slopes"
@@ -187,8 +197,9 @@ static func create_roller() -> Weapon:
 	w.icon_color = Color.GREEN
 	return w
 
-static func create_leapfrog() -> Weapon:
-	var w = Weapon.new()
+static func create_leapfrog():
+	var WeaponScript = load("res://scripts/Weapon.gd")
+	var w = WeaponScript.new()
 	w.weapon_id = "leapfrog"
 	w.weapon_name = "Leapfrog"
 	w.description = "Multiple bounces before detonation"
@@ -200,8 +211,9 @@ static func create_leapfrog() -> Weapon:
 	w.icon_color = Color.LIME
 	return w
 
-static func create_dirt_ball() -> Weapon:
-	var w = Weapon.new()
+static func create_dirt_ball():
+	var WeaponScript = load("res://scripts/Weapon.gd")
+	var w = WeaponScript.new()
 	w.weapon_id = "dirt_ball"
 	w.weapon_name = "Dirt Ball"
 	w.description = "Adds terrain"
@@ -213,8 +225,9 @@ static func create_dirt_ball() -> Weapon:
 	w.icon_color = Color.BROWN
 	return w
 
-static func create_dirt_slapper() -> Weapon:
-	var w = Weapon.new()
+static func create_dirt_slapper():
+	var WeaponScript = load("res://scripts/Weapon.gd")
+	var w = WeaponScript.new()
 	w.weapon_id = "dirt_slapper"
 	w.weapon_name = "Dirt Slapper"
 	w.description = "Large dirt deposit"
@@ -226,8 +239,9 @@ static func create_dirt_slapper() -> Weapon:
 	w.icon_color = Color.SADDLE_BROWN
 	return w
 
-static func create_dirt_charge() -> Weapon:
-	var w = Weapon.new()
+static func create_dirt_charge():
+	var WeaponScript = load("res://scripts/Weapon.gd")
+	var w = WeaponScript.new()
 	w.weapon_id = "dirt_charge"
 	w.weapon_name = "Dirt Charge"
 	w.description = "Removes terrain"

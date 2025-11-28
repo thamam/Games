@@ -5,7 +5,7 @@ class_name Projectile
 ## Handles physics, collision, and explosion
 
 signal exploded(position: Vector2, damage: int, radius: float)
-signal hit_tank(tank: Tank)
+signal hit_tank(tank)
 
 ## Projectile Properties
 @export var damage: int = 30
@@ -27,8 +27,8 @@ var wind_vector: Vector2 = Vector2.ZERO
 var has_exploded: bool = false
 
 ## References
-var game_manager: GameManager
-var terrain: Terrain
+var game_manager  # GameManager reference (untyped to avoid circular dependency)
+var terrain  # Terrain reference (untyped to avoid circular dependency)
 
 ## Visual Components
 var sprite: ColorRect
@@ -61,7 +61,7 @@ func setup_visuals() -> void:
 	trail.z_index = -1
 	get_parent().add_child(trail) if get_parent() else add_child(trail)
 
-func initialize(start_pos: Vector2, start_velocity: Vector2, player: int, mgr: GameManager, terr: Terrain) -> void:
+func initialize(start_pos: Vector2, start_velocity: Vector2, player: int, mgr, terr) -> void:  # mgr=GameManager, terr=Terrain (untyped to avoid circular dependency)
 	"""Initialize projectile with starting conditions"""
 	global_position = start_pos
 	velocity = start_velocity
@@ -130,8 +130,8 @@ func handle_collision(collision: KinematicCollision2D) -> void:
 	"""Handle collision with objects"""
 	var collider = collision.get_collider()
 
-	# Check if hit tank
-	if collider is Tank:
+	# Check if hit tank (duck typing to avoid circular dependency)
+	if collider and collider.has_method("get_health"):
 		explode()
 		hit_tank.emit(collider)
 		return
@@ -181,7 +181,7 @@ func apply_explosion_damage() -> void:
 
 	for i in range(game_manager.tanks.size()):
 		var tank = game_manager.tanks[i]
-		if not tank or tank.current_health <= 0:
+		if not tank or tank.get_health() <= 0:
 			continue
 
 		var distance = global_position.distance_to(tank.global_position)
@@ -198,28 +198,136 @@ func apply_explosion_damage() -> void:
 				game_manager.apply_damage(i, actual_damage, fired_by_player)
 
 func create_explosion_effect() -> void:
-	"""Create visual explosion effect"""
-	# Simple particle effect using colored circles
-	var explosion_particles = Node2D.new()
-	explosion_particles.global_position = global_position
-	get_tree().root.add_child(explosion_particles)
+	"""Create visual explosion effect with particle system"""
+	var explosion_container = Node2D.new()
+	explosion_container.global_position = global_position
+	get_tree().root.add_child(explosion_container)
 
-	# Create expanding circles
-	for i in range(5):
-		var particle = ColorRect.new()
-		var size = (i + 1) * explosion_radius / 2.5
-		particle.size = Vector2(size, size)
-		particle.position = -particle.size / 2
-		particle.color = Color(1.0, 0.6, 0.0, 1.0 - (i * 0.15))
-		explosion_particles.add_child(particle)
+	# Main explosion flash (brief, bright center)
+	var flash = ColorRect.new()
+	var flash_size = explosion_radius * 2.0
+	flash.size = Vector2(flash_size, flash_size)
+	flash.position = -flash.size / 2
+	flash.color = Color(1.0, 0.9, 0.6, 0.9)  # Bright yellow-white
+	flash.z_index = 10
+	explosion_container.add_child(flash)
 
-	# Animate and remove
-	await get_tree().create_timer(0.3).timeout
-	explosion_particles.queue_free()
+	# Debris particles using CPUParticles2D
+	var debris = CPUParticles2D.new()
+	debris.emitting = true
+	debris.one_shot = true
+	debris.explosiveness = 0.9
+	debris.amount = int(explosion_radius * 2)  # More particles for bigger explosions
+	debris.lifetime = 0.8
+	debris.speed_scale = 1.5
+
+	# Emission
+	debris.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
+	debris.emission_sphere_radius = explosion_radius * 0.3
+
+	# Particle appearance
+	debris.color = Color(0.6, 0.4, 0.2, 1.0)  # Dirt color (will vary per particle)
+	debris.color_ramp = create_debris_color_ramp()
+
+	# Physics
+	debris.direction = Vector2(0, -1)
+	debris.spread = 180
+	debris.gravity = Vector2(0, 980)
+	debris.initial_velocity_min = explosion_radius * 8
+	debris.initial_velocity_max = explosion_radius * 12
+	debris.angular_velocity_min = -360
+	debris.angular_velocity_max = 360
+	debris.damping_min = 10
+	debris.damping_max = 30
+
+	# Scale (debris gets smaller over time)
+	debris.scale_amount_min = 2.0
+	debris.scale_amount_max = 4.0
+	debris.scale_amount_curve = create_debris_scale_curve()
+
+	explosion_container.add_child(debris)
+
+	# Smoke cloud particles
+	var smoke = CPUParticles2D.new()
+	smoke.emitting = true
+	smoke.one_shot = true
+	smoke.explosiveness = 0.7
+	smoke.amount = int(explosion_radius * 1.5)
+	smoke.lifetime = 1.2
+	smoke.speed_scale = 0.8
+
+	# Smoke emission
+	smoke.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
+	smoke.emission_sphere_radius = explosion_radius * 0.5
+
+	# Smoke appearance
+	smoke.color = Color(0.3, 0.2, 0.15, 0.6)  # Dark brown smoke
+	smoke.color_ramp = create_smoke_color_ramp()
+
+	# Smoke physics (rises and spreads)
+	smoke.direction = Vector2(0, -1)
+	smoke.spread = 45
+	smoke.gravity = Vector2(0, -100)  # Negative = rises
+	smoke.initial_velocity_min = explosion_radius * 2
+	smoke.initial_velocity_max = explosion_radius * 4
+	smoke.damping_min = 5
+	smoke.damping_max = 15
+
+	# Smoke expands over time
+	smoke.scale_amount_min = 4.0
+	smoke.scale_amount_max = 8.0
+	smoke.scale_amount_curve = create_smoke_scale_curve()
+
+	explosion_container.add_child(smoke)
+
+	# Animate flash fade out quickly
+	var flash_timer = get_tree().create_timer(0.05)
+	flash_timer.timeout.connect(func():
+		if is_instance_valid(flash):
+			flash.queue_free()
+	)
+
+	# Remove entire explosion container after particles finish
+	var cleanup_timer = get_tree().create_timer(1.5)
+	cleanup_timer.timeout.connect(func():
+		if is_instance_valid(explosion_container):
+			explosion_container.queue_free()
+	)
 
 	# Clean up trail
 	if trail:
 		trail.queue_free()
+
+func create_debris_color_ramp() -> Gradient:
+	"""Create color gradient for debris particles"""
+	var gradient = Gradient.new()
+	gradient.set_color(0, Color(0.6, 0.4, 0.2, 1.0))  # Dirt brown
+	gradient.set_color(1, Color(0.4, 0.3, 0.2, 0.0))  # Fade to transparent
+	return gradient
+
+func create_debris_scale_curve() -> Curve:
+	"""Create scale curve for debris (shrinks over time)"""
+	var curve = Curve.new()
+	curve.add_point(Vector2(0, 1.0))
+	curve.add_point(Vector2(0.5, 0.7))
+	curve.add_point(Vector2(1, 0.2))
+	return curve
+
+func create_smoke_color_ramp() -> Gradient:
+	"""Create color gradient for smoke particles"""
+	var gradient = Gradient.new()
+	gradient.set_color(0, Color(0.4, 0.3, 0.2, 0.7))  # Dark brown smoke
+	gradient.set_color(0.5, Color(0.5, 0.4, 0.3, 0.4))  # Lighter
+	gradient.set_color(1, Color(0.6, 0.5, 0.4, 0.0))  # Fade out
+	return gradient
+
+func create_smoke_scale_curve() -> Curve:
+	"""Create scale curve for smoke (expands over time)"""
+	var curve = Curve.new()
+	curve.add_point(Vector2(0, 0.3))
+	curve.add_point(Vector2(0.3, 0.8))
+	curve.add_point(Vector2(1, 1.5))
+	return curve
 
 ## Weapon-specific subclasses can override these methods
 
@@ -234,112 +342,107 @@ func update_behavior(delta: float) -> void:
 
 ## Specific weapon types
 
-class_name MissileProjectile
-extends Projectile
-
-func _init() -> void:
-	damage = 30
-	explosion_radius = 30.0
-	projectile_color = Color.YELLOW
+class MissileProjectile extends Projectile:
+	func _init() -> void:
+		damage = 30
+		explosion_radius = 30.0
+		projectile_color = Color.YELLOW
 
 
-class_name HeavyMissileProjectile
-extends Projectile
-
-func _init() -> void:
-	damage = 70
-	explosion_radius = 50.0
-	projectile_color = Color.ORANGE
+class HeavyMissileProjectile extends Projectile:
+	func _init() -> void:
+		damage = 70
+		explosion_radius = 50.0
+		projectile_color = Color.ORANGE
 
 
-class_name NukeProjectile
-extends Projectile
+class NukeProjectile extends Projectile:
 
-func _init() -> void:
-	damage = 120
-	explosion_radius = 100.0
-	projectile_color = Color.RED
+	func _init() -> void:
+		damage = 120
+		explosion_radius = 100.0
+		projectile_color = Color.RED
 
-func create_explosion_effect() -> void:
-	"""Enhanced explosion for nuke"""
-	super.create_explosion_effect()
+	func create_explosion_effect() -> void:
+		"""Enhanced explosion for nuke"""
+		super.create_explosion_effect()
 
-	# Additional shockwave - detached from projectile lifecycle
-	if terrain:
-		var shockwave_timer = Timer.new()
-		shockwave_timer.wait_time = 0.1
-		shockwave_timer.one_shot = false
+		# Additional shockwave - detached from projectile lifecycle
+		if terrain:
+			var shockwave_timer = Timer.new()
+			shockwave_timer.wait_time = 0.1
+			shockwave_timer.one_shot = false
 
-		var shockwaves_done = 0
-		var shockwave_pos = global_position
-		var saved_terrain = terrain
-		var saved_radius = explosion_radius
+			var shockwaves_done = 0
+			var shockwave_pos = global_position
+			var saved_terrain = terrain
+			var saved_radius = explosion_radius
 
-		shockwave_timer.timeout.connect(func():
-			shockwaves_done += 1
-			if not is_instance_valid(saved_terrain) or shockwaves_done > 3:
-				shockwave_timer.queue_free()
-				return
+			shockwave_timer.timeout.connect(func():
+				shockwaves_done += 1
+				if not is_instance_valid(saved_terrain) or shockwaves_done > 3:
+					shockwave_timer.queue_free()
+					return
 
-			var wave_radius = saved_radius * (1.0 + shockwaves_done * 0.3)
-			saved_terrain.destroy_terrain(shockwave_pos, wave_radius * 0.3, false)
-		)
+				var wave_radius = saved_radius * (1.0 + shockwaves_done * 0.3)
+				saved_terrain.destroy_terrain(shockwave_pos, wave_radius * 0.3, false)
+			)
 
-		get_tree().root.add_child(shockwave_timer)
-		shockwave_timer.start()
+			get_tree().root.add_child(shockwave_timer)
+			shockwave_timer.start()
 
 
-class_name MIRVProjectile
-extends Projectile
+class MIRVProjectile extends Projectile:
 
-var split_into_submunitions: bool = false
-var submunition_count: int = 5
-var apex_reached: bool = false
-var apex_height: float = 0.0
+	var split_into_submunitions: bool = false
+	var submunition_count: int = 5
+	var apex_reached: bool = false
+	var apex_height: float = 0.0
 
-func _init() -> void:
-	damage = 20  # Each submunition
-	explosion_radius = 25.0
-	projectile_color = Color.CYAN
+	func _init() -> void:
+		damage = 20  # Each submunition
+		explosion_radius = 25.0
+		projectile_color = Color.CYAN
 
-func _physics_process(delta: float) -> void:
-	super._physics_process(delta)
+	func _physics_process(delta: float) -> void:
+		super._physics_process(delta)
 
-	# Check if reached apex (velocity becomes downward)
-	if not apex_reached and velocity.y > 0:
-		apex_reached = true
-		split_mirv()
+		# Check if reached apex (velocity becomes downward)
+		if not apex_reached and velocity.y > 0:
+			apex_reached = true
+			split_mirv()
 
-func split_mirv() -> void:
-	"""Split into multiple independent warheads"""
-	if split_into_submunitions or has_exploded:
-		return
+	func split_mirv() -> void:
+		"""Split into multiple independent warheads"""
+		if split_into_submunitions or has_exploded:
+			return
 
-	split_into_submunitions = true
-	print("MIRV splitting into %d warheads!" % submunition_count)
+		split_into_submunitions = true
+		print("MIRV splitting into %d warheads!" % submunition_count)
 
-	# Create submunitions
-	for i in range(submunition_count):
-		var submunition = Projectile.new()
-		submunition.damage = damage
-		submunition.explosion_radius = explosion_radius
-		submunition.projectile_color = projectile_color
+		# Create submunitions
+		var ProjectileScript = load("res://scripts/Projectile.gd")
+		for i in range(submunition_count):
+			var submunition = ProjectileScript.new()
+			submunition.damage = damage
+			submunition.explosion_radius = explosion_radius
+			submunition.projectile_color = projectile_color
 
-		# Spread submunitions
-		var spread_angle = -60 + (i * 120.0 / submunition_count)
-		var spread_velocity = Vector2(
-			cos(deg_to_rad(spread_angle)),
-			sin(deg_to_rad(spread_angle))
-		) * 150
+			# Spread submunitions
+			var spread_angle = -60 + (i * 120.0 / submunition_count)
+			var spread_velocity = Vector2(
+				cos(deg_to_rad(spread_angle)),
+				sin(deg_to_rad(spread_angle))
+			) * 150
 
-		get_parent().add_child(submunition)
-		submunition.initialize(
-			global_position,
-			velocity * 0.3 + spread_velocity,
-			fired_by_player,
-			game_manager,
-			terrain
-		)
+			get_parent().add_child(submunition)
+			submunition.initialize(
+				global_position,
+				velocity * 0.3 + spread_velocity,
+				fired_by_player,
+				game_manager,
+				terrain
+			)
 
-	# Remove parent projectile
-	queue_free()
+		# Remove parent projectile
+		queue_free()

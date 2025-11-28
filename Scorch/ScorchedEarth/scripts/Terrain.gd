@@ -10,7 +10,7 @@ signal terrain_modified()
 @export var terrain_width: int = 1280
 @export var terrain_height: int = 720
 @export var base_height: int = 500
-@export var roughness: float = 50.0
+@export var roughness: float = 80.0  # Increased for more dramatic terrain
 @export var terrain_color: Color = Color(0.6, 0.4, 0.2)  # Brown
 @export var sky_color: Color = Color(0.3, 0.5, 0.8)  # Blue
 
@@ -69,11 +69,14 @@ func generate_terrain(seed_value: int = -1) -> void:
 
 	terrain_sprite.texture = terrain_texture
 
+	# Create collision for terrain
+	setup_collision()
+
 	print("Terrain generated: %dx%d" % [terrain_width, terrain_height])
 
 func midpoint_displacement() -> void:
-	"""Generate terrain using midpoint displacement algorithm"""
-	var segment_size = terrain_width / 4
+	"""Generate terrain using enhanced midpoint displacement algorithm"""
+	var segment_size = terrain_width / 2  # Start with larger segments for more variation
 	var variance = roughness
 
 	while segment_size > 1:
@@ -86,11 +89,16 @@ func midpoint_displacement() -> void:
 				# Calculate midpoint with random displacement
 				var mid_height = (left + right) / 2.0
 				mid_height += randf_range(-variance, variance)
-				mid_height = clamp(mid_height, 100, terrain_height - 100)
+
+				# Add occasional dramatic features (peaks and valleys)
+				if randf() < 0.15:  # 15% chance of dramatic feature
+					mid_height += randf_range(-variance * 2, variance * 2)
+
+				mid_height = clamp(mid_height, 50, terrain_height - 50)  # Allow higher/lower terrain
 				height_map[mid_index] = int(mid_height)
 
 		# Reduce variance and segment size
-		variance *= 0.5
+		variance *= 0.6  # Slower reduction for more variation
 		segment_size = segment_size / 2
 
 func smooth_terrain(iterations: int = 1) -> void:
@@ -113,6 +121,36 @@ func smooth_terrain(iterations: int = 1) -> void:
 			new_heights[x] = sum / count
 
 		height_map = new_heights
+
+func setup_collision() -> void:
+	"""Create collision shape for terrain based on height map"""
+	# Remove old collision if exists
+	if collision_shape:
+		collision_shape.queue_free()
+
+	# Create StaticBody2D for terrain collision
+	var static_body = StaticBody2D.new()
+	add_child(static_body)
+
+	# Create collision polygon
+	collision_shape = CollisionPolygon2D.new()
+	static_body.add_child(collision_shape)
+
+	# Build polygon from height map
+	var polygon_points = PackedVector2Array()
+
+	# Start from bottom-left
+	polygon_points.append(Vector2(0, terrain_height))
+
+	# Follow the terrain surface
+	for x in range(terrain_width):
+		polygon_points.append(Vector2(x, height_map[x]))
+
+	# Complete the polygon: right edge down, bottom edge left
+	polygon_points.append(Vector2(terrain_width - 1, terrain_height))
+
+	collision_shape.polygon = polygon_points
+	print("Collision shape created with %d points" % polygon_points.size())
 
 func destroy_terrain(position: Vector2, radius: float, add_dirt: bool = false) -> void:
 	"""Destroy (or add) terrain at position with given radius"""
@@ -150,6 +188,9 @@ func destroy_terrain(position: Vector2, radius: float, add_dirt: bool = false) -
 		# Update texture
 		terrain_texture.update(terrain_image)
 
+		# Update collision
+		setup_collision()
+
 		terrain_modified.emit()
 
 func update_height_map(start_x: int = 0, end_x: int = -1) -> void:
@@ -166,7 +207,7 @@ func update_height_map(start_x: int = 0, end_x: int = -1) -> void:
 		# Find first solid pixel from top
 		for y in range(terrain_height):
 			var pixel = terrain_image.get_pixel(x, y)
-			if pixel.a > 0.5 and pixel.distance_to(terrain_color) < 0.1:
+			if pixel.a > 0.5 and pixel.is_equal_approx(terrain_color):
 				height = y
 				break
 		height_map[x] = height if height > 0 else terrain_height
@@ -187,7 +228,8 @@ func is_solid_at(position: Vector2) -> bool:
 		return false
 
 	var pixel = terrain_image.get_pixel(x, y)
-	return pixel.distance_to(terrain_color) < 0.1
+	# Check if pixel is terrain color (not sky)
+	return pixel.is_equal_approx(terrain_color)
 
 func get_surface_normal(x: float) -> Vector2:
 	"""Get surface normal at x position for physics"""

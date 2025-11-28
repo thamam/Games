@@ -1,10 +1,11 @@
 extends Node2D
 
 ## Main Game Scene - Orchestrates all game systems
+## Note: All scripts use class_name declarations and are globally available
 
-## Node references
-@onready var game_manager: GameManager = $GameManager
-@onready var terrain: Terrain = $Terrain
+## Node references (untyped to avoid circular dependencies)
+@onready var game_manager = $GameManager  # GameManager
+@onready var terrain = $Terrain  # Terrain
 @onready var tanks_container: Node2D = $Tanks
 @onready var projectiles_container: Node2D = $Projectiles
 @onready var ui: Control = $UI
@@ -16,10 +17,16 @@ var player_info_label: Label
 var wind_indicator: Label
 var angle_label: Label
 var power_label: Label
+var shop: Control  # Shop UI
 
 ## Game state
-var current_weapon: Weapon
-var current_tank: Tank
+var current_weapon  # Weapon
+var current_tank  # Tank
+
+## Game configuration (exposed for customization)
+@export var num_players: int = 4  # Total players (2-10 per GDD)
+@export var num_human_players: int = 1  # Number of human players (rest are AI)
+@export var ai_difficulty: int = 1  # Default AI level (0=Lobber, 1=Poolshark, 2=Spoiler)
 
 func _ready() -> void:
 	print("=================================")
@@ -71,13 +78,20 @@ func setup_ui() -> void:
 
 	# Control hints
 	var hints = Label.new()
-	hints.text = "Controls: Arrow Keys (Angle/Power) | SPACE (Fire) | A/D (Move) | 1-9 (Select Weapon)"
+	hints.text = "Controls: Arrow Keys (Angle/Power) | SPACE (Fire) | A/D (Move) | 1-9 (Weapon) | TAB (Shop)"
 	hints.position = Vector2(10, get_viewport_rect().size.y - 30)
 	hints.add_theme_font_size_override("font_size", 12)
 	hints.add_theme_color_override("font_color", Color.WHITE)
 	hints.add_theme_color_override("font_outline_color", Color.BLACK)
 	hints.add_theme_constant_override("outline_size", 1)
 	ui.add_child(hints)
+
+	# Shop UI
+	var ShopScript = load("res://scripts/Shop.gd")
+	shop = ShopScript.new()
+	shop.purchase_completed.connect(_on_purchase_completed)
+	shop.shop_closed.connect(_on_shop_closed)
+	ui.add_child(shop)
 
 func setup_game() -> void:
 	"""Initialize game systems"""
@@ -97,9 +111,19 @@ func start_new_game() -> void:
 	# Generate terrain
 	terrain.generate_terrain(randi())
 
-	# Setup game with 2 players (1 human, 1 AI)
-	var ai_players = [{"level": 1}]  # One medium AI
-	game_manager.setup_new_game(2, ai_players)
+	# Setup game with configurable players - GDD supports 2-10 players
+	# Create AI player array based on configuration
+	var ai_players: Array[Dictionary] = []
+	var num_ai = max(0, num_players - num_human_players)
+
+	for i in range(num_ai):
+		ai_players.append({"level": ai_difficulty})
+
+	print("Game setup: %d players (%d human, %d AI at level %d)" % [
+		num_players, num_human_players, num_ai, ai_difficulty
+	])
+
+	game_manager.setup_new_game(num_players, ai_players)
 
 	# Spawn tanks
 	spawn_tanks()
@@ -108,7 +132,8 @@ func start_new_game() -> void:
 	game_manager.start_round()
 
 	# Set default weapon
-	current_weapon = Weapon.create_missile()
+	var WeaponScript = load("res://scripts/Weapon.gd")
+	current_weapon = WeaponScript.create_missile()
 
 func spawn_tanks() -> void:
 	"""Spawn tanks for all players"""
@@ -119,8 +144,9 @@ func spawn_tanks() -> void:
 		child.queue_free()
 
 	# Create tank for each player
+	var TankScript = load("res://scripts/Tank.gd")
 	for i in range(game_manager.num_players):
-		var tank = Tank.new()
+		var tank = TankScript.new()
 		var player = game_manager.players[i]
 
 		# Set tank properties
@@ -151,6 +177,13 @@ func _on_turn_started(player_index: int) -> void:
 	status_label.add_theme_color_override("font_color", player.color)
 
 	print("\n--- %s's Turn ---" % player.name)
+
+	# Open shop for human players at turn start
+	if not player.is_ai:
+		# Small delay before showing shop
+		await get_tree().create_timer(0.3).timeout
+		if shop and is_instance_valid(shop):
+			shop.open_shop(player_index, game_manager)
 
 func _on_turn_ended(player_index: int) -> void:
 	"""Handle turn end"""
@@ -219,7 +252,8 @@ func _process(_delta: float) -> void:
 
 func update_ui() -> void:
 	"""Update UI elements"""
-	if game_manager.current_state == GameManager.GameState.PLAYING:
+	var GameManagerScript = load("res://scripts/GameManager.gd")
+	if game_manager.current_state == GameManagerScript.GameState.PLAYING:
 		var player = game_manager.get_current_player()
 		if player.is_empty():
 			return
@@ -238,7 +272,7 @@ func update_ui() -> void:
 		wind_indicator.text = "Wind: %s %.0f" % [wind_str, abs(wind.x)]
 
 		# Tank status
-		if current_tank and current_tank.current_health > 0:
+		if current_tank and current_tank.get_health() > 0:
 			var status = current_tank.get_status_text()
 			# Update angle/power display
 			if status_label:
@@ -248,12 +282,14 @@ func update_ui() -> void:
 
 func handle_game_input() -> void:
 	"""Handle global input"""
+	var GameManagerScript = load("res://scripts/GameManager.gd")
+
 	# Current player input
-	if game_manager.current_state == GameManager.GameState.PLAYING:
+	if game_manager.current_state == GameManagerScript.GameState.PLAYING:
 		var player = game_manager.get_current_player()
 
 		if not player.is_empty() and not player.is_ai:
-			if current_tank and current_tank.current_health > 0:
+			if current_tank and current_tank.get_health() > 0:
 				current_tank.handle_input(get_process_delta_time())
 
 				# Weapon selection
@@ -261,14 +297,20 @@ func handle_game_input() -> void:
 					if Input.is_action_just_pressed("weapon_%d" % i):
 						select_weapon(i - 1)
 
+				# Shop toggle (TAB key)
+				if Input.is_key_pressed(KEY_TAB):
+					if shop and is_instance_valid(shop) and not shop.visible:
+						shop.open_shop(game_manager.current_turn, game_manager)
+
 	# Restart game
 	if Input.is_action_just_pressed("ui_cancel"):
-		if game_manager.current_state == GameManager.GameState.GAME_OVER:
+		if game_manager.current_state == GameManagerScript.GameState.GAME_OVER:
 			get_tree().reload_current_scene()
 
 func select_weapon(index: int) -> void:
 	"""Select weapon by index"""
-	var weapons = Weapon.get_all_weapons()
+	var WeaponScript = load("res://scripts/Weapon.gd")
+	var weapons = WeaponScript.get_all_weapons()
 	if index >= 0 and index < weapons.size():
 		current_weapon = weapons[index]
 		print("Selected weapon: %s" % current_weapon.weapon_name)
@@ -277,6 +319,21 @@ func _input(event: InputEvent) -> void:
 	"""Handle input events"""
 	# Restart with R key
 	if event is InputEventKey and event.pressed and event.keycode == KEY_R:
-		if game_manager.current_state == GameManager.GameState.GAME_OVER:
+		var GameManagerScript = load("res://scripts/GameManager.gd")
+		if game_manager.current_state == GameManagerScript.GameState.GAME_OVER:
 			print("\nRestarting game...")
 			get_tree().reload_current_scene()
+
+func _on_purchase_completed(item_type: String, item_id: String) -> void:
+	"""Handle purchase completion"""
+	print("Purchase completed: %s (%s)" % [item_id, item_type])
+
+	# Update current weapon if weapon was purchased
+	if item_type == "weapon":
+		var WeaponScript = load("res://scripts/Weapon.gd")
+		current_weapon = WeaponScript.get_weapon_by_id(item_id)
+		print("Current weapon set to: %s" % current_weapon.weapon_name)
+
+func _on_shop_closed() -> void:
+	"""Handle shop close"""
+	print("Shop closed, ready for turn")

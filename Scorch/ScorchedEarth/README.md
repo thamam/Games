@@ -96,6 +96,25 @@ godot --path . res://scenes/Main.tscn
 godot -e project.godot
 ```
 
+## Deploy to Web (Vercel)
+
+Want to play the game in your browser or share it online? Deploy to Vercel for free!
+
+### Quick Deploy (5 minutes)
+See **[VERCEL_QUICKSTART.md](VERCEL_QUICKSTART.md)** for the fastest way to get your game online.
+
+### Full Deployment Guide
+For detailed instructions, configuration options, and troubleshooting:
+- 📖 **[DEPLOYMENT.md](DEPLOYMENT.md)** - Complete deployment guide
+
+### What You Get
+- 🌐 **Live Web Game** - Play in any modern browser
+- 🚀 **Fast Global CDN** - Served from Vercel's edge network
+- 🔄 **Auto-Deploy** - Updates automatically when you push to Git
+- 📱 **Share Anywhere** - Just send the URL!
+
+**Example:** `https://scorched-earth.vercel.app`
+
 ## Game Modes
 
 ### Current Implementation
