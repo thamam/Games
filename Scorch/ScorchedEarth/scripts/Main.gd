@@ -2,6 +2,13 @@ extends Node2D
 
 ## Main Game Scene - Orchestrates all game systems
 
+## Preload scripts to ensure they're available
+const GameManagerScript = preload("res://scripts/GameManager.gd")
+const TerrainScript = preload("res://scripts/Terrain.gd")
+const TankScript = preload("res://scripts/Tank.gd")
+const ProjectileScript = preload("res://scripts/Projectile.gd")
+const WeaponScript = preload("res://scripts/Weapon.gd")
+
 ## Node references
 @onready var game_manager: GameManager = $GameManager
 @onready var terrain: Terrain = $Terrain

@@ -4,6 +4,11 @@ class_name Projectile
 ## Projectile - Base class for all weapons
 ## Handles physics, collision, and explosion
 
+## Preload dependencies
+const GameManagerScript = preload("res://scripts/GameManager.gd")
+const TerrainScript = preload("res://scripts/Terrain.gd")
+const TankScript = preload("res://scripts/Tank.gd")
+
 signal exploded(position: Vector2, damage: int, radius: float)
 signal hit_tank(tank: Tank)
 

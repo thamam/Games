@@ -3,6 +3,10 @@ class_name Tank
 
 ## Tank - Player controllable tank with cannon, movement, and damage system
 
+## Preload dependencies
+const GameManagerScript = preload("res://scripts/GameManager.gd")
+const TerrainScript = preload("res://scripts/Terrain.gd")
+
 signal fired(weapon_type: String, angle: float, power: float)
 signal destroyed()
 signal moved(new_position: Vector2)

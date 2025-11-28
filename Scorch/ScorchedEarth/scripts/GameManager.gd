@@ -4,6 +4,11 @@ class_name GameManager
 ## Game Manager - Orchestrates the entire game flow
 ## Manages turns, players, game state, and win conditions
 
+## Preload dependencies
+const TerrainScript = preload("res://scripts/Terrain.gd")
+const TankScript = preload("res://scripts/Tank.gd")
+const ProjectileScript = preload("res://scripts/Projectile.gd")
+
 signal turn_started(player_index: int)
 signal turn_ended(player_index: int)
 signal game_over(winner_index: int)
