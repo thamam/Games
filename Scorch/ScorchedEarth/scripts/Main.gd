@@ -22,6 +22,11 @@ var power_label: Label
 var current_weapon  # Weapon
 var current_tank  # Tank
 
+## Game configuration (exposed for customization)
+@export var num_players: int = 4  # Total players (2-10 per GDD)
+@export var num_human_players: int = 1  # Number of human players (rest are AI)
+@export var ai_difficulty: int = 1  # Default AI level (0=Lobber, 1=Poolshark, 2=Spoiler)
+
 func _ready() -> void:
 	print("=================================")
 	print("  SCORCHED EARTH - Godot Remake  ")
@@ -98,13 +103,19 @@ func start_new_game() -> void:
 	# Generate terrain
 	terrain.generate_terrain(randi())
 
-	# Setup game with 4 players (1 human, 3 AI) - GDD supports 2-10 players
-	var ai_players: Array[Dictionary] = [
-		{"level": 1},  # Medium AI
-		{"level": 1},  # Medium AI
-		{"level": 1}   # Medium AI
-	]
-	game_manager.setup_new_game(4, ai_players)
+	# Setup game with configurable players - GDD supports 2-10 players
+	# Create AI player array based on configuration
+	var ai_players: Array[Dictionary] = []
+	var num_ai = max(0, num_players - num_human_players)
+
+	for i in range(num_ai):
+		ai_players.append({"level": ai_difficulty})
+
+	print("Game setup: %d players (%d human, %d AI at level %d)" % [
+		num_players, num_human_players, num_ai, ai_difficulty
+	])
+
+	game_manager.setup_new_game(num_players, ai_players)
 
 	# Spawn tanks
 	spawn_tanks()
