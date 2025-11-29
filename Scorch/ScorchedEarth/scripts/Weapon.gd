@@ -23,6 +23,7 @@ class_name Weapon
 
 ## Special weapon properties
 @export var is_mirv: bool = false
+@export var is_cluster_bomb: bool = false
 @export var is_guided: bool = false
 @export var heat_seeking: bool = false
 @export var splits_count: int = 0
@@ -35,6 +36,12 @@ func create_projectile():
 	var ProjectileScript = load("res://scripts/Projectile.gd")
 	if is_mirv:
 		projectile = ProjectileScript.MIRVProjectile.new()
+	elif is_cluster_bomb:
+		projectile = ProjectileScript.FunkyBombProjectile.new()
+	elif is_guided:
+		projectile = ProjectileScript.GuidedMissileProjectile.new()
+	elif heat_seeking:
+		projectile = ProjectileScript.HeatSeekingProjectile.new()
 	else:
 		projectile = ProjectileScript.new()
 
@@ -62,6 +69,8 @@ static func get_all_weapons() -> Array:
 		create_nuke(),
 		create_mirv(),
 		create_funky_bomb(),
+		create_guided_missile(),
+		create_heat_seeker(),
 		create_napalm(),
 		create_roller(),
 		create_leapfrog(),
@@ -159,13 +168,40 @@ static func create_funky_bomb():
 	var w = WeaponScript.new()
 	w.weapon_id = "funky_bomb"
 	w.weapon_name = "Funky Bomb"
-	w.description = "Chaotic cluster bomb"
+	w.description = "Scatters 8 submunitions"
 	w.cost = 2000
 	w.damage = 20
 	w.explosion_radius = 25.0
+	w.is_cluster_bomb = true
 	w.max_bounces = 3
 	w.bounce_factor = 0.7
 	w.icon_color = Color.MAGENTA
+	return w
+
+static func create_guided_missile():
+	var WeaponScript = load("res://scripts/Weapon.gd")
+	var w = WeaponScript.new()
+	w.weapon_id = "guided_missile"
+	w.weapon_name = "Guided Missile"
+	w.description = "Player-controlled flight"
+	w.cost = 2500
+	w.damage = 50
+	w.explosion_radius = 40.0
+	w.is_guided = true
+	w.icon_color = Color(1.0, 0.8, 0.0)  # Gold
+	return w
+
+static func create_heat_seeker():
+	var WeaponScript = load("res://scripts/Weapon.gd")
+	var w = WeaponScript.new()
+	w.weapon_id = "heat_seeker"
+	w.weapon_name = "Heat Seeker"
+	w.description = "Tracks nearest tank"
+	w.cost = 3500
+	w.damage = 60
+	w.explosion_radius = 45.0
+	w.heat_seeking = true
+	w.icon_color = Color(1.0, 0.3, 0.0)  # Orange-red
 	return w
 
 static func create_napalm():

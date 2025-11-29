@@ -446,3 +446,266 @@ class MIRVProjectile extends Projectile:
 
 		# Remove parent projectile
 		queue_free()
+
+
+class FunkyBombProjectile extends Projectile:
+	"""Cluster bomb that scatters submunitions on final impact"""
+
+	var cluster_count: int = 8
+	var cluster_spread_speed: float = 200.0
+	var has_clustered: bool = false
+
+	func _init() -> void:
+		damage = 20  # Each submunition
+		explosion_radius = 25.0
+		projectile_color = Color.MAGENTA
+		max_bounces = 3
+		bounce_factor = 0.7
+
+	func handle_collision(collision: KinematicCollision2D) -> void:
+		"""Override collision handling to cluster on final bounce"""
+		var collider = collision.get_collider()
+
+		# Check if hit tank - explode immediately
+		if collider and collider.has_method("get_health"):
+			explode()
+			hit_tank.emit(collider)
+			return
+
+		# Check if can bounce
+		if bounces_remaining > 0:
+			bounces_remaining -= 1
+
+			# Reflect velocity
+			var normal = collision.get_normal()
+			velocity = velocity.bounce(normal) * bounce_factor
+
+			print("Funky Bomb bounced! (%d bounces left)" % bounces_remaining)
+		else:
+			# No bounces left - create cluster
+			create_cluster()
+
+	func create_cluster() -> void:
+		"""Create scattered cluster submunitions"""
+		if has_clustered or has_exploded:
+			return
+
+		has_clustered = true
+		print("Funky Bomb clustering into %d submunitions!" % cluster_count)
+
+		# Create clustered submunitions
+		var ProjectileScript = load("res://scripts/Projectile.gd")
+		for i in range(cluster_count):
+			var submunition = ProjectileScript.new()
+			submunition.damage = damage
+			submunition.explosion_radius = explosion_radius * 0.8  # Slightly smaller explosions
+			submunition.projectile_color = projectile_color
+			submunition.detonation_timer = randf_range(0.1, 0.4)  # Short random fuse
+
+			# Random scatter in all directions (360°)
+			var scatter_angle = randf_range(0, 360)
+			var scatter_velocity = Vector2(
+				cos(deg_to_rad(scatter_angle)),
+				sin(deg_to_rad(scatter_angle))
+			) * randf_range(cluster_spread_speed * 0.7, cluster_spread_speed * 1.3)
+
+			get_parent().add_child(submunition)
+			submunition.initialize(
+				global_position,
+				scatter_velocity,
+				fired_by_player,
+				game_manager,
+				terrain
+			)
+
+		# Remove parent projectile
+		queue_free()
+
+
+class GuidedMissileProjectile extends Projectile:
+	"""Player-controlled missile with arrow key steering"""
+
+	var thrust_power: float = 300.0
+	var turn_rate: float = 100.0
+	var fuel_remaining: float = 3.0  # 3 seconds of control
+
+	func _init() -> void:
+		damage = 50
+		explosion_radius = 40.0
+		projectile_color = Color(1.0, 0.8, 0.0)  # Gold
+		detonation_timer = 15.0
+
+	func _physics_process(delta: float) -> void:
+		if has_exploded:
+			return
+
+		time_alive += delta
+
+		# Auto-detonate after timer expires
+		if time_alive >= detonation_timer:
+			explode()
+			return
+
+		# Player control (if fuel remaining)
+		if fuel_remaining > 0:
+			handle_player_input(delta)
+			fuel_remaining -= delta
+
+		# Apply gravity (reduced for missiles)
+		var gravity = ProjectSettings.get_setting("physics/2d/default_gravity") * gravity_scale * 0.5
+		velocity.y += gravity * delta
+
+		# Apply wind
+		velocity.x += wind_vector.x * wind_resistance * delta
+
+		# Store previous position for trail
+		var previous_pos = global_position
+
+		# Move projectile
+		var collision = move_and_collide(velocity * delta)
+
+		# Update trail
+		add_trail_point(previous_pos)
+
+		# Check collision
+		if collision:
+			handle_collision(collision)
+		else:
+			# Check if hit terrain (pixel-perfect)
+			if terrain and terrain.is_solid_at(global_position):
+				explode()
+
+	func handle_player_input(delta: float) -> void:
+		"""Apply thrust based on player input"""
+		var thrust = Vector2.ZERO
+
+		# Horizontal thrust (left/right)
+		if Input.is_action_pressed("ui_left"):
+			thrust.x -= thrust_power
+		if Input.is_action_pressed("ui_right"):
+			thrust.x += thrust_power
+
+		# Vertical thrust (up/down)
+		if Input.is_action_pressed("ui_up"):
+			thrust.y -= thrust_power
+		if Input.is_action_pressed("ui_down"):
+			thrust.y += thrust_power
+
+		# Apply thrust to velocity (gradual, not instant)
+		velocity += thrust * delta
+
+		# Limit maximum speed
+		var max_speed = 600.0
+		if velocity.length() > max_speed:
+			velocity = velocity.normalized() * max_speed
+
+
+class HeatSeekingProjectile extends Projectile:
+	"""Missile that tracks nearest enemy tank"""
+
+	var turn_rate: float = 150.0  # Degrees per second
+	var acceleration: float = 200.0  # Thrust toward target
+	var tracking_duration: float = 5.0  # How long it tracks
+	var target_tank = null
+
+	func _init() -> void:
+		damage = 60
+		explosion_radius = 45.0
+		projectile_color = Color(1.0, 0.3, 0.0)  # Orange-red
+		detonation_timer = 15.0
+
+	func _physics_process(delta: float) -> void:
+		if has_exploded:
+			return
+
+		time_alive += delta
+
+		# Auto-detonate after timer expires
+		if time_alive >= detonation_timer:
+			explode()
+			return
+
+		# Track target (if within tracking duration)
+		if time_alive < tracking_duration:
+			find_and_track_target(delta)
+
+		# Apply gravity (reduced for missiles)
+		var gravity = ProjectSettings.get_setting("physics/2d/default_gravity") * gravity_scale * 0.3
+		velocity.y += gravity * delta
+
+		# Apply wind
+		velocity.x += wind_vector.x * wind_resistance * delta
+
+		# Store previous position for trail
+		var previous_pos = global_position
+
+		# Move projectile
+		var collision = move_and_collide(velocity * delta)
+
+		# Update trail
+		add_trail_point(previous_pos)
+
+		# Check collision
+		if collision:
+			handle_collision(collision)
+		else:
+			# Check if hit terrain (pixel-perfect)
+			if terrain and terrain.is_solid_at(global_position):
+				explode()
+
+	func find_and_track_target(delta: float) -> void:
+		"""Find nearest tank and adjust trajectory toward it"""
+		if not game_manager:
+			return
+
+		# Find nearest alive enemy tank
+		var nearest_tank = null
+		var nearest_distance = INF
+
+		for i in range(game_manager.tanks.size()):
+			# Skip if it's the firing player or tank is dead
+			if i == fired_by_player:
+				continue
+
+			var tank = game_manager.tanks[i]
+			if not tank or game_manager.players[i].health <= 0:
+				continue
+
+			var distance = global_position.distance_to(tank.global_position)
+			if distance < nearest_distance:
+				nearest_distance = distance
+				nearest_tank = tank
+
+		if not nearest_tank:
+			return
+
+		target_tank = nearest_tank
+
+		# Calculate direction to target
+		var to_target = (target_tank.global_position - global_position).normalized()
+
+		# Current velocity direction
+		var current_dir = velocity.normalized()
+
+		# Gradually rotate toward target (limited turn rate)
+		var angle_diff = current_dir.angle_to(to_target)
+		var max_turn = deg_to_rad(turn_rate) * delta
+
+		# Clamp rotation
+		if abs(angle_diff) > max_turn:
+			angle_diff = sign(angle_diff) * max_turn
+
+		# Apply rotation to velocity
+		var new_dir = current_dir.rotated(angle_diff)
+
+		# Apply acceleration toward target
+		var current_speed = velocity.length()
+		current_speed += acceleration * delta
+
+		# Update velocity
+		velocity = new_dir * current_speed
+
+		# Limit maximum speed
+		var max_speed = 500.0
+		if velocity.length() > max_speed:
+			velocity = velocity.normalized() * max_speed
