@@ -289,3 +289,9 @@ func set_volcanic_theme() -> void:
 	terrain_color = Color(0.3, 0.1, 0.1)  # Dark red
 	sky_color = Color(0.4, 0.2, 0.1)  # Orange haze
 	generate_terrain()
+
+func set_arctic_theme() -> void:
+	"""Set arctic terrain colors"""
+	terrain_color = Color(0.9, 0.95, 1.0)  # Icy white-blue
+	sky_color = Color(0.7, 0.85, 0.95)  # Pale blue
+	generate_terrain()
