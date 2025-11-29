@@ -241,8 +241,9 @@ func _on_tank_fired(_weapon_type: String, _angle: float, _power: float, player_i
 	# Wait for projectile to finish
 	await projectile.tree_exited
 
-	# Small delay after explosion
-	await get_tree().create_timer(0.5).timeout
+	# Small delay after explosion (check if still in tree)
+	if is_inside_tree():
+		await get_tree().create_timer(0.5).timeout
 
 	# End turn
 	game_manager.end_turn()

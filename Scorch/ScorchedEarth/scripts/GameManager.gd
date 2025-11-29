@@ -118,8 +118,11 @@ func start_round() -> void:
 
 	# After shop phase, start playing
 	# For now, skip shop and go straight to playing
-	await get_tree().create_timer(0.5).timeout
-	start_playing()
+	if is_inside_tree():
+		await get_tree().create_timer(0.5).timeout
+		start_playing()
+	else:
+		return  # Node not in tree, abort round start
 
 func start_playing() -> void:
 	"""Begin the playing phase"""
@@ -157,7 +160,10 @@ func handle_ai_turn() -> void:
 
 	# AI "thinking" time (varies by difficulty)
 	var think_time = 1.5 - (current_player.ai_level * 0.3)  # Harder AI thinks faster
-	await get_tree().create_timer(think_time).timeout
+	if is_inside_tree():
+		await get_tree().create_timer(think_time).timeout
+	else:
+		return  # Node not in tree, abort AI turn
 
 	# Select target
 	var target_index = ai_select_target(current_player)

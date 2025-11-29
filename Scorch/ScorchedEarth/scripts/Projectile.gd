@@ -46,6 +46,13 @@ func _ready() -> void:
 	# Set up collision
 	motion_mode = CharacterBody2D.MOTION_MODE_FLOATING
 
+	# Create collision shape for projectile
+	var collision_shape = CollisionShape2D.new()
+	var circle_shape = CircleShape2D.new()
+	circle_shape.radius = PROJECTILE_SIZE / 2.0  # Match visual size
+	collision_shape.shape = circle_shape
+	add_child(collision_shape)
+
 func setup_visuals() -> void:
 	"""Create projectile visual representation"""
 	# Projectile sprite
