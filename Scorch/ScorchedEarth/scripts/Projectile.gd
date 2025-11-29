@@ -33,6 +33,7 @@ var terrain  # Terrain reference (untyped to avoid circular dependency)
 ## Visual Components
 var sprite: ColorRect
 var trail: Line2D
+var trail_particles: CPUParticles2D  # Smoke trail
 var trail_points: Array[Vector2] = []
 
 const MAX_TRAIL_POINTS = 50
@@ -54,12 +55,35 @@ func setup_visuals() -> void:
 	sprite.color = projectile_color
 	add_child(sprite)
 
-	# Trail
+	# Line trail
 	trail = Line2D.new()
 	trail.width = 2.0
-	trail.default_color = trail_color
+	trail.default_color = projectile_color  # Use weapon color for trail
 	trail.z_index = -1
 	get_parent().add_child(trail) if get_parent() else add_child(trail)
+
+	# Smoke trail particles
+	trail_particles = CPUParticles2D.new()
+	trail_particles.emitting = true
+	trail_particles.amount = 30
+	trail_particles.lifetime = 0.5
+	trail_particles.emission_shape = CPUParticles2D.EMISSION_SHAPE_POINT
+	trail_particles.direction = Vector2(0, 1)  # Downward
+	trail_particles.spread = 15
+	trail_particles.gravity = Vector2(0, -50)  # Slight upward drift
+	trail_particles.initial_velocity_min = 10
+	trail_particles.initial_velocity_max = 20
+	trail_particles.scale_amount_min = 1.0
+	trail_particles.scale_amount_max = 2.0
+	trail_particles.color = projectile_color * 0.6  # Darkened weapon color
+	trail_particles.color.a = 0.4
+	# Fade to transparent
+	var trail_gradient = Gradient.new()
+	trail_gradient.set_color(0, projectile_color * 0.6)
+	trail_gradient.set_color(1, Color(projectile_color.r, projectile_color.g, projectile_color.b, 0.0))
+	trail_particles.color_ramp = trail_gradient
+	trail_particles.z_index = -2
+	add_child(trail_particles)
 
 func initialize(start_pos: Vector2, start_velocity: Vector2, player: int, mgr, terr) -> void:  # mgr=GameManager, terr=Terrain (untyped to avoid circular dependency)
 	"""Initialize projectile with starting conditions"""
@@ -203,12 +227,17 @@ func create_explosion_effect() -> void:
 	explosion_container.global_position = global_position
 	get_tree().root.add_child(explosion_container)
 
-	# Main explosion flash (brief, bright center)
+	# Main explosion flash (brief, bright center) - intensity scales with damage
 	var flash = ColorRect.new()
 	var flash_size = explosion_radius * 2.0
 	flash.size = Vector2(flash_size, flash_size)
 	flash.position = -flash.size / 2
-	flash.color = Color(1.0, 0.9, 0.6, 0.9)  # Bright yellow-white
+
+	# Weapon-specific flash color (blend projectile color with white)
+	var flash_intensity = clamp(damage / 100.0, 0.5, 1.0)  # Scale with damage
+	var flash_color = projectile_color.lerp(Color.WHITE, 0.7) * flash_intensity
+	flash_color.a = 0.9
+	flash.color = flash_color
 	flash.z_index = 10
 	explosion_container.add_child(flash)
 
@@ -225,9 +254,11 @@ func create_explosion_effect() -> void:
 	debris.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
 	debris.emission_sphere_radius = explosion_radius * 0.3
 
-	# Particle appearance
-	debris.color = Color(0.6, 0.4, 0.2, 1.0)  # Dirt color (will vary per particle)
-	debris.color_ramp = create_debris_color_ramp()
+	# Particle appearance - blend weapon color with dirt
+	var dirt_color = Color(0.6, 0.4, 0.2, 1.0)
+	var debris_color = dirt_color.lerp(projectile_color, 0.3)  # 30% weapon color
+	debris.color = debris_color
+	debris.color_ramp = create_debris_color_ramp(debris_color)
 
 	# Physics
 	debris.direction = Vector2(0, -1)
@@ -294,15 +325,20 @@ func create_explosion_effect() -> void:
 			explosion_container.queue_free()
 	)
 
-	# Clean up trail
+	# Clean up trails
 	if trail:
 		trail.queue_free()
+	if trail_particles:
+		trail_particles.emitting = false
+		trail_particles.queue_free()
 
-func create_debris_color_ramp() -> Gradient:
+func create_debris_color_ramp(base_color: Color = Color(0.6, 0.4, 0.2, 1.0)) -> Gradient:
 	"""Create color gradient for debris particles"""
 	var gradient = Gradient.new()
-	gradient.set_color(0, Color(0.6, 0.4, 0.2, 1.0))  # Dirt brown
-	gradient.set_color(1, Color(0.4, 0.3, 0.2, 0.0))  # Fade to transparent
+	gradient.set_color(0, base_color)  # Start with weapon-tinted color
+	var fade_color = base_color.darkened(0.3)
+	fade_color.a = 0.0
+	gradient.set_color(1, fade_color)  # Fade to transparent darker version
 	return gradient
 
 func create_debris_scale_curve() -> Curve:
