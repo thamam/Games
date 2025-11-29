@@ -319,6 +319,18 @@ func destroy() -> void:
 		cannon_line.visible = false
 	if health_bar:
 		health_bar.visible = false
+	if label:
+		label.visible = false
+	if shield_effect:
+		shield_effect.visible = false
+
+	# Disable physics processing to prevent falling through terrain
+	set_physics_process(false)
+	set_process(false)
+
+	# Disable collision so tank doesn't interfere with game
+	collision_layer = 0
+	collision_mask = 0
 
 func _process(_delta: float) -> void:
 	"""Update visual effects"""
