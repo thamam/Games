@@ -30,6 +30,7 @@ var theme_gravity_multiplier: float = 1.0  # Modifier for physics gravity
 var terrain_image: Image
 var terrain_texture: ImageTexture
 var terrain_sprite: Sprite2D
+var collision_body: StaticBody2D  # Track the physics body
 var collision_shape: CollisionPolygon2D
 
 ## Height map for quick access
@@ -88,14 +89,14 @@ func generate_terrain(seed_value: int = -1) -> void:
 
 func midpoint_displacement() -> void:
 	"""Generate terrain using enhanced midpoint displacement algorithm"""
-	var segment_size = terrain_width / 2  # Start with larger segments for more variation
+	var segment_size = terrain_width // 2  # Start with larger segments for more variation
 	var variance = roughness
 
 	while segment_size > 1:
 		for i in range(0, terrain_width - segment_size, segment_size):
 			var left = height_map[i]
 			var right = height_map[min(i + segment_size, terrain_width - 1)]
-			var mid_index = i + segment_size / 2
+			var mid_index = i + segment_size // 2
 
 			if mid_index < terrain_width:
 				# Calculate midpoint with random displacement
@@ -111,7 +112,7 @@ func midpoint_displacement() -> void:
 
 		# Reduce variance and segment size
 		variance *= 0.6  # Slower reduction for more variation
-		segment_size = segment_size / 2
+		segment_size = segment_size // 2
 
 func smooth_terrain(iterations: int = 1) -> void:
 	"""Smooth terrain using moving average"""
@@ -130,23 +131,25 @@ func smooth_terrain(iterations: int = 1) -> void:
 					sum += height_map[nx]
 					count += 1
 
-			new_heights[x] = sum / count
+			new_heights[x] = sum // count
 
 		height_map = new_heights
 
 func setup_collision() -> void:
 	"""Create collision shape for terrain based on height map"""
-	# Remove old collision if exists
-	if collision_shape:
-		collision_shape.queue_free()
+	# Remove old collision body if exists
+	if collision_body:
+		collision_body.queue_free()
+		collision_body = null
+		collision_shape = null
 
 	# Create StaticBody2D for terrain collision
-	var static_body = StaticBody2D.new()
-	add_child(static_body)
+	collision_body = StaticBody2D.new()
+	add_child(collision_body)
 
 	# Create collision polygon
 	collision_shape = CollisionPolygon2D.new()
-	static_body.add_child(collision_shape)
+	collision_body.add_child(collision_shape)
 
 	# Build polygon from height map
 	var polygon_points = PackedVector2Array()
@@ -260,7 +263,7 @@ func get_surface_normal(x: float) -> Vector2:
 func find_spawn_position(index: int, total: int) -> Vector2:
 	"""Find suitable spawn position for tank"""
 	# Distribute tanks evenly across terrain
-	var spacing = terrain_width / (total + 1)
+	var spacing = terrain_width // (total + 1)
 	var x = spacing * (index + 1)
 
 	# Adjust x to avoid edges

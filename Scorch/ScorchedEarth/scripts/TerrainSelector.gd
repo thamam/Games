@@ -94,42 +94,42 @@ func create_theme_buttons() -> void:
 	var spacing = 10
 
 	for i in range(themes.size()):
-		var theme = themes[i]
+		var terrain_theme = themes[i]
 		var button = Button.new()
 		button.custom_minimum_size = Vector2(560, button_height)
 		button.position = Vector2(20, y_offset + i * (button_height + spacing))
 
 		# Get theme info for button text
-		var info = get_theme_info_static(theme)
+		var info = get_theme_info_static(terrain_theme)
 		var button_text = "%s" % info.name
 		if info.gravity_multiplier < 1.0:
 			button_text += " (LOW GRAVITY)"
 		button.text = button_text
 
-		button.pressed.connect(_on_theme_button_pressed.bind(theme))
+		button.pressed.connect(_on_theme_button_pressed.bind(terrain_theme))
 		panel.add_child(button)
 		theme_buttons.append(button)
 
 		# Highlight default selection
-		if theme == Terrain.TerrainTheme.MOUNTAINS:
+		if terrain_theme == Terrain.TerrainTheme.MOUNTAINS:
 			button.modulate = Color(1.2, 1.2, 0.8)
 
-func _on_theme_button_pressed(theme: Terrain.TerrainTheme) -> void:
+func _on_theme_button_pressed(terrain_theme: Terrain.TerrainTheme) -> void:
 	"""Handle theme button press"""
-	selected_theme = theme
-	update_description(theme)
+	selected_theme = terrain_theme
+	update_description(terrain_theme)
 
 	# Update button highlights
 	for i in range(theme_buttons.size()):
 		var btn = theme_buttons[i]
-		if i == int(theme):
+		if i == int(terrain_theme):
 			btn.modulate = Color(1.2, 1.2, 0.8)  # Highlight selected
 		else:
 			btn.modulate = Color(1.0, 1.0, 1.0)  # Normal
 
-func update_description(theme: Terrain.TerrainTheme) -> void:
+func update_description(terrain_theme: Terrain.TerrainTheme) -> void:
 	"""Update description label with theme details"""
-	var info = get_theme_info_static(theme)
+	var info = get_theme_info_static(terrain_theme)
 
 	var desc_text = "%s\n" % info.name
 	desc_text += "%s\n" % info.description
@@ -158,9 +158,9 @@ func show_selector() -> void:
 	show()
 	grab_focus()
 
-func get_theme_info_static(theme: Terrain.TerrainTheme) -> Dictionary:
+func get_theme_info_static(terrain_theme: Terrain.TerrainTheme) -> Dictionary:
 	"""Get theme info without terrain instance (static version)"""
-	match theme:
+	match terrain_theme:
 		Terrain.TerrainTheme.DESERT:
 			return {
 				"name": "Desert",
