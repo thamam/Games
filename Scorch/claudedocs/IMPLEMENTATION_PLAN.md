@@ -240,29 +240,39 @@ func calculate_trajectory(from: Vector2, to: Vector2, wind: Vector2) -> Dictiona
 
 ---
 
-### 1.4 - Visual Effects Polish
+### 1.4 - Visual Effects Polish ⚙️ IN PROGRESS (Commit: a3f0830)
 
-**Status**: Particle system implemented, needs enhancement
+**Status**: Explosion and trail effects enhanced, tank visuals pending
 **GDD Reference**: Section 5.3 (Particle Effects), 5.4 (Tank Designs)
+**Implementation Date**: 2025-11-29 (partial)
 
-**Implementation Tasks**:
-1. Enhanced explosion effects
-   - Scale debris/smoke particles with weapon type
-   - Add fire effects for napalm weapons
-   - Flash intensity based on damage
-   - Screen shake for large explosions (optional)
-2. Projectile trails
-   - Weapon-specific trail colors
-   - Particle trail that fades over time
-   - Smoke trail for guided missiles
-3. Tank visual feedback
+**Completed Features** (Projectile.gd:200-334):
+1. ✅ Enhanced explosion effects (COMPLETE)
+   - ✅ Weapon-specific flash colors (projectile_color.lerp(white, 0.7))
+   - ✅ Flash intensity scales with damage (damage/100, clamped 0.5-1.0)
+   - ✅ Weapon-tinted debris (30% projectile_color blend with dirt)
+   - ✅ Enhanced debris gradients (fade to darkened transparent)
+   - ⏳ Fire effects for napalm weapons (pending)
+   - ⏳ Screen shake for large explosions (pending)
+
+2. ✅ Projectile trails (COMPLETE)
+   - ✅ CPUParticles2D smoke trails with weapon colors
+   - ✅ Particle trail fades over 0.5s lifetime
+   - ✅ Trail uses darkened projectile_color (60% brightness)
+   - ✅ Gradient fade to transparent
+   - ✅ Line2D trail uses weapon color
+
+**Pending Implementation**:
+3. ❌ Tank visual feedback (NOT STARTED)
    - Damage states (pristine → damaged → critical)
    - Shield visual indicator (force field effect)
    - Movement dust particles when tank moves
-4. Terrain-specific effects
+
+4. ❌ Terrain-specific effects (NOT STARTED)
    - Different debris colors per terrain type (sand, rock, lunar)
    - Terrain-matched explosion colors
-5. UI polish
+
+5. ❌ UI polish (NOT STARTED)
    - Animated health bars
    - Money/score popup animations
    - Turn transition effects
