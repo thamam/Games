@@ -14,6 +14,18 @@ signal terrain_modified()
 @export var terrain_color: Color = Color(0.6, 0.4, 0.2)  # Brown
 @export var sky_color: Color = Color(0.3, 0.5, 0.8)  # Blue
 
+## Theme Configuration
+enum TerrainTheme {
+	DESERT,
+	MOUNTAINS,
+	LUNAR,
+	ARCTIC,
+	VOLCANIC
+}
+
+var current_theme: TerrainTheme = TerrainTheme.MOUNTAINS
+var theme_gravity_multiplier: float = 1.0  # Modifier for physics gravity
+
 ## Terrain Data
 var terrain_image: Image
 var terrain_texture: ImageTexture
@@ -266,32 +278,94 @@ func apply_gravity_to_loose_terrain() -> void:
 
 ## Terrain type presets
 
-func set_desert_theme() -> void:
-	"""Set desert terrain colors"""
-	terrain_color = Color(0.93, 0.79, 0.55)  # Sandy yellow
-	sky_color = Color(0.53, 0.81, 0.92)  # Light blue
+func get_theme_info(theme: TerrainTheme) -> Dictionary:
+	"""Get information about a terrain theme"""
+	match theme:
+		TerrainTheme.DESERT:
+			return {
+				"name": "Desert",
+				"description": "Sandy dunes with smooth terrain",
+				"terrain_color": Color(0.93, 0.79, 0.55),
+				"sky_color": Color(0.53, 0.81, 0.92),
+				"gravity_multiplier": 1.0,
+				"roughness_modifier": 0.7  # Smoother terrain
+			}
+		TerrainTheme.MOUNTAINS:
+			return {
+				"name": "Mountains",
+				"description": "Rocky peaks with varied elevation",
+				"terrain_color": Color(0.5, 0.5, 0.5),
+				"sky_color": Color(0.3, 0.5, 0.8),
+				"gravity_multiplier": 1.0,
+				"roughness_modifier": 1.0  # Normal terrain
+			}
+		TerrainTheme.LUNAR:
+			return {
+				"name": "Lunar",
+				"description": "Low gravity moon surface",
+				"terrain_color": Color(0.4, 0.4, 0.4),
+				"sky_color": Color(0.05, 0.05, 0.1),
+				"gravity_multiplier": 0.5,  # Low gravity!
+				"roughness_modifier": 0.8
+			}
+		TerrainTheme.ARCTIC:
+			return {
+				"name": "Arctic",
+				"description": "Frozen icy tundra",
+				"terrain_color": Color(0.9, 0.95, 1.0),
+				"sky_color": Color(0.7, 0.85, 0.95),
+				"gravity_multiplier": 1.0,
+				"roughness_modifier": 0.9
+			}
+		TerrainTheme.VOLCANIC:
+			return {
+				"name": "Volcanic",
+				"description": "Molten lava and ash",
+				"terrain_color": Color(0.3, 0.1, 0.1),
+				"sky_color": Color(0.4, 0.2, 0.1),
+				"gravity_multiplier": 1.0,
+				"roughness_modifier": 1.2  # More jagged
+			}
+	return {}
+
+func set_theme(theme: TerrainTheme) -> void:
+	"""Apply a terrain theme with all its properties"""
+	current_theme = theme
+	var info = get_theme_info(theme)
+
+	terrain_color = info.terrain_color
+	sky_color = info.sky_color
+	theme_gravity_multiplier = info.gravity_multiplier
+
+	# Adjust roughness based on theme
+	var base_roughness = 80.0
+	roughness = base_roughness * info.roughness_modifier
+
+	# Apply gravity to physics system
+	var base_gravity = 980.0
+	var new_gravity = base_gravity * theme_gravity_multiplier
+	ProjectSettings.set_setting("physics/2d/default_gravity", new_gravity)
+
 	generate_terrain()
+
+	print("Theme applied: %s (Gravity: %.0f)" % [info.name, new_gravity])
+
+func set_desert_theme() -> void:
+	"""Set desert terrain theme"""
+	set_theme(TerrainTheme.DESERT)
 
 func set_mountain_theme() -> void:
-	"""Set mountain terrain colors"""
-	terrain_color = Color(0.5, 0.5, 0.5)  # Grey
-	sky_color = Color(0.3, 0.5, 0.8)  # Sky blue
-	generate_terrain()
+	"""Set mountain terrain theme"""
+	set_theme(TerrainTheme.MOUNTAINS)
 
 func set_lunar_theme() -> void:
-	"""Set lunar terrain colors"""
-	terrain_color = Color(0.4, 0.4, 0.4)  # Dark grey
-	sky_color = Color(0.05, 0.05, 0.1)  # Dark space
-	generate_terrain()
+	"""Set lunar terrain theme (LOW GRAVITY)"""
+	set_theme(TerrainTheme.LUNAR)
 
 func set_volcanic_theme() -> void:
-	"""Set volcanic terrain colors"""
-	terrain_color = Color(0.3, 0.1, 0.1)  # Dark red
-	sky_color = Color(0.4, 0.2, 0.1)  # Orange haze
-	generate_terrain()
+	"""Set volcanic terrain theme"""
+	set_theme(TerrainTheme.VOLCANIC)
 
 func set_arctic_theme() -> void:
-	"""Set arctic terrain colors"""
-	terrain_color = Color(0.9, 0.95, 1.0)  # Icy white-blue
-	sky_color = Color(0.7, 0.85, 0.95)  # Pale blue
-	generate_terrain()
+	"""Set arctic terrain theme"""
+	set_theme(TerrainTheme.ARCTIC)

@@ -18,6 +18,7 @@ var wind_indicator: Label
 var angle_label: Label
 var power_label: Label
 var shop: Control  # Shop UI
+var terrain_selector: Control  # Terrain selection UI
 
 ## Game state
 var current_weapon  # Weapon
@@ -36,9 +37,13 @@ func _ready() -> void:
 	setup_ui()
 	setup_game()
 
-	# Start game after short delay
-	await get_tree().create_timer(1.0).timeout
-	start_new_game()
+	# Show terrain selector first (Phase 2.1 - Terrain Variety)
+	await get_tree().create_timer(0.5).timeout
+	if terrain_selector:
+		terrain_selector.show_selector()
+	else:
+		# Fallback: Start game immediately with default theme
+		start_new_game()
 
 func setup_ui() -> void:
 	"""Setup user interface"""
@@ -93,6 +98,13 @@ func setup_ui() -> void:
 	shop.shop_closed.connect(_on_shop_closed)
 	ui.add_child(shop)
 
+	# Terrain Selector UI (Phase 2.1)
+	var TerrainSelectorScript = load("res://scripts/TerrainSelector.gd")
+	terrain_selector = TerrainSelectorScript.new()
+	terrain_selector.theme_selected.connect(_on_terrain_theme_selected)
+	terrain_selector.selection_cancelled.connect(_on_terrain_selection_cancelled)
+	ui.add_child(terrain_selector)
+
 func setup_game() -> void:
 	"""Initialize game systems"""
 	# Connect game manager signals
@@ -104,12 +116,12 @@ func setup_game() -> void:
 	# Assign references
 	game_manager.terrain = terrain
 
-func start_new_game() -> void:
-	"""Start a new game"""
+func start_new_game(selected_theme: Terrain.TerrainTheme = Terrain.TerrainTheme.MOUNTAINS) -> void:
+	"""Start a new game with selected terrain theme"""
 	print("Starting new game...")
 
-	# Generate terrain
-	terrain.generate_terrain(randi())
+	# Apply selected terrain theme (Phase 2.1)
+	terrain.set_theme(selected_theme)
 
 	# Setup game with configurable players - GDD supports 2-10 players
 	# Create AI player array based on configuration
@@ -337,3 +349,13 @@ func _on_purchase_completed(item_type: String, item_id: String) -> void:
 func _on_shop_closed() -> void:
 	"""Handle shop close"""
 	print("Shop closed, ready for turn")
+
+func _on_terrain_theme_selected(theme: Terrain.TerrainTheme) -> void:
+	"""Handle terrain theme selection (Phase 2.1)"""
+	print("Terrain theme selected: %s" % theme)
+	start_new_game(theme)
+
+func _on_terrain_selection_cancelled() -> void:
+	"""Handle terrain selection cancelled (Phase 2.1)"""
+	print("Terrain selection cancelled, using default")
+	start_new_game(Terrain.TerrainTheme.MOUNTAINS)
