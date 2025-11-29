@@ -148,30 +148,44 @@ func start_turn() -> void:
 		handle_ai_turn()
 
 func handle_ai_turn() -> void:
-	"""Handle AI player's turn"""
-	await get_tree().create_timer(1.0).timeout  # AI "thinking" time
-
+	"""Handle AI player's turn with difficulty-based intelligence"""
 	var current_player = players[current_player_index]
 	var current_tank = tanks[current_player_index]
 
-	# Simple AI: Pick random target and shoot
-	var target_index = get_random_alive_player()
-	if target_index >= 0:
-		var target_tank = tanks[target_index]
+	# AI shopping phase (if has money and needs weapons/items)
+	await ai_shopping_phase(current_player)
 
-		# Calculate approximate angle and power
-		var angle = calculate_angle_to_target(current_tank, target_tank)
-		var power = randf_range(0.5, 1.0)
+	# AI "thinking" time (varies by difficulty)
+	var think_time = 1.5 - (current_player.ai_level * 0.3)  # Harder AI thinks faster
+	await get_tree().create_timer(think_time).timeout
 
-		# Add some randomness based on AI level
-		var difficulty = current_player.ai_level
-		var accuracy = 0.3 + (difficulty * 0.3)  # 0=30%, 1=60%, 2=90% accuracy
-		angle += randf_range(-30.0, 30.0) * (1.0 - accuracy)
+	# Select target
+	var target_index = ai_select_target(current_player)
+	if target_index < 0:
+		# No valid targets - skip turn
+		return
 
-		# Set tank controls and fire (Main scene will handle projectile creation)
-		current_tank.set_cannon_angle(angle)
-		current_tank.set_fire_power(power)
+	var target_tank = tanks[target_index]
+
+	# Select weapon
+	var weapon_choice = ai_select_weapon(current_player, target_tank)
+
+	# Calculate shot parameters
+	var shot_params = ai_calculate_shot(current_player, current_tank, target_tank)
+
+	if shot_params:
+		# Apply difficulty-based accuracy modifiers
+		shot_params = ai_apply_accuracy_modifier(current_player, shot_params)
+
+		# Execute shot
+		current_tank.set_cannon_angle(shot_params.angle)
+		current_tank.set_fire_power(shot_params.power)
 		current_player.shots_fired += 1
+		current_tank.fire(weapon_choice)
+	else:
+		# Fallback: random shot
+		current_tank.set_cannon_angle(randf_range(30, 150))
+		current_tank.set_fire_power(randf_range(0.5, 1.0))
 		current_tank.fire("missile")
 
 func calculate_angle_to_target(from_tank, to_tank) -> float:  # Tank parameters (untyped to avoid circular dependency)
@@ -198,6 +212,172 @@ func get_random_alive_player() -> int:
 		return -1
 
 	return valid_targets[randi() % valid_targets.size()]
+
+## AI System Functions
+
+func ai_shopping_phase(player: Dictionary) -> void:
+	"""AI purchases weapons and items strategically"""
+	# Only shop if has significant money
+	if player.money < 500:
+		return
+
+	# Defensive purchases (shields if low health)
+	if player.health < 50 and player.money >= 500:
+		player.shields += 25
+		player.money -= 500
+		print("%s (AI) purchased Medium Shield" % player.name)
+
+	# Weapon purchases based on money available
+	if player.money >= 3000 and randf() < 0.3:
+		# Buy expensive weapon (MIRV or Heat Seeker)
+		var weapon_id = "mirv" if randf() < 0.5 else "heat_seeker"
+		if not player.inventory.has(weapon_id):
+			player.inventory[weapon_id] = 0
+		player.inventory[weapon_id] += 1
+		player.money -= 3000
+		print("%s (AI) purchased %s" % [player.name, weapon_id])
+	elif player.money >= 1500 and randf() < 0.4:
+		# Buy mid-tier weapon
+		if not player.inventory.has("heavy_missile"):
+			player.inventory["heavy_missile"] = 0
+		player.inventory["heavy_missile"] += 1
+		player.money -= 1500
+		print("%s (AI) purchased heavy_missile" % player.name)
+
+func ai_select_target(player: Dictionary) -> int:
+	"""Select target based on AI difficulty and strategy"""
+	var valid_targets = []
+	for i in range(num_players):
+		if i != current_player_index and players[i].health > 0:
+			valid_targets.append(i)
+
+	if valid_targets.is_empty():
+		return -1
+
+	match player.ai_level:
+		0:  # Lobber - Random target
+			return valid_targets[randi() % valid_targets.size()]
+		1, 2:  # Poolshark/Spoiler - Target weakest or nearest
+			var best_target = valid_targets[0]
+			var best_score = INF
+
+			for target_idx in valid_targets:
+				# Score = health (prefer weak) + distance (prefer close)
+				var distance = tanks[current_player_index].global_position.distance_to(
+					tanks[target_idx].global_position
+				)
+				var score = players[target_idx].health * 2 + distance * 0.1
+
+				if score < best_score:
+					best_score = score
+					best_target = target_idx
+
+			return best_target
+
+	return valid_targets[0]
+
+func ai_select_weapon(player: Dictionary, target_tank) -> String:
+	"""Select appropriate weapon from inventory"""
+	# If has special weapons in inventory, use strategically
+	if player.inventory.has("heat_seeker") and player.inventory["heat_seeker"] > 0:
+		player.inventory["heat_seeker"] -= 1
+		return "heat_seeker"
+
+	if player.inventory.has("mirv") and player.inventory["mirv"] > 0:
+		player.inventory["mirv"] -= 1
+		return "mirv"
+
+	if player.inventory.has("heavy_missile") and player.inventory["heavy_missile"] > 0:
+		player.inventory["heavy_missile"] -= 1
+		return "heavy_missile"
+
+	# Default to basic missile
+	return "missile"
+
+func ai_calculate_shot(player: Dictionary, from_tank, to_tank) -> Dictionary:
+	"""Calculate ballistic trajectory using physics"""
+	var start_pos = from_tank.global_position
+	var target_pos = to_tank.global_position
+
+	var dx = target_pos.x - start_pos.x
+	var dy = target_pos.y - start_pos.y
+
+	# Get gravity and wind
+	var gravity = ProjectSettings.get_setting("physics/2d/default_gravity")
+	var wind_x = current_wind.x
+
+	# Try different angles to find best shot
+	var best_angle = 45.0
+	var best_power = 0.7
+	var best_error = INF
+
+	# Difficulty determines how many attempts AI makes
+	var attempts = 5 + (player.ai_level * 10)  # 5, 15, 25 attempts
+
+	for i in range(attempts):
+		var test_angle = randf_range(20, 160)
+		var test_power = randf_range(0.3, 1.0)
+
+		# Calculate where shot would land
+		var predicted_error = calculate_shot_error(
+			start_pos, test_angle, test_power, target_pos, gravity, wind_x
+		)
+
+		if predicted_error < best_error:
+			best_error = predicted_error
+			best_angle = test_angle
+			best_power = test_power
+
+	return {"angle": best_angle, "power": best_power, "error": best_error}
+
+func calculate_shot_error(start_pos: Vector2, angle: float, power: float,
+						 target: Vector2, gravity: float, wind: float) -> float:
+	"""Simple ballistic prediction to estimate shot accuracy"""
+	# Initial velocity
+	var speed = power * 500.0  # Max velocity
+	var rad_angle = deg_to_rad(angle)
+	var vx = cos(rad_angle) * speed
+	var vy = -sin(rad_angle) * speed
+
+	# Simulate trajectory for limited time
+	var pos = start_pos
+	var vel = Vector2(vx, vy)
+	var time_step = 0.1
+	var max_time = 5.0
+
+	for t in range(int(max_time / time_step)):
+		# Apply physics
+		vel.y += gravity * time_step
+		vel.x += wind * time_step * 0.5  # Wind effect
+
+		pos += vel * time_step
+
+		# Check if close to target height
+		if pos.y >= target.y:
+			# Calculate horizontal error
+			return abs(pos.x - target.x)
+
+	# Shot goes too high or too far
+	return 9999.0
+
+func ai_apply_accuracy_modifier(player: Dictionary, shot_params: Dictionary) -> Dictionary:
+	"""Apply difficulty-based aiming error"""
+	match player.ai_level:
+		0:  # Lobber - Very inaccurate (30-50% accuracy)
+			shot_params.angle += randf_range(-40, 40)
+			shot_params.power += randf_range(-0.3, 0.3)
+		1:  # Poolshark - Moderate accuracy (60-80%)
+			shot_params.angle += randf_range(-15, 15)
+			shot_params.power += randf_range(-0.15, 0.15)
+		2:  # Spoiler - High accuracy (90-95%)
+			shot_params.angle += randf_range(-5, 5)
+			shot_params.power += randf_range(-0.05, 0.05)
+
+	# Clamp to valid ranges
+	shot_params.angle = clamp(shot_params.angle, 0, 180)
+	shot_params.power = clamp(shot_params.power, 0.1, 1.0)
+
+	return shot_params
 
 func end_turn() -> void:
 	"""End the current player's turn"""
