@@ -32,6 +32,9 @@ var body_rect: ColorRect
 var cannon_line: Line2D
 var health_bar: ProgressBar
 var label: Label
+var shield_effect: ColorRect  # Shield visual indicator
+var damage_smoke: CPUParticles2D  # Smoke when damaged
+var movement_dust: CPUParticles2D  # Dust when moving
 
 const TANK_SIZE = Vector2(20, 12)
 const CANNON_LENGTH = 15.0
@@ -107,6 +110,57 @@ func setup_visuals() -> void:
 	label.position = Vector2(-15, -35)
 	label.add_theme_font_size_override("font_size", 10)
 	add_child(label)
+
+	# Shield effect (animated force field)
+	shield_effect = ColorRect.new()
+	shield_effect.size = TANK_SIZE * 1.8  # Larger than tank
+	shield_effect.position = -(TANK_SIZE * 1.8) / 2
+	shield_effect.color = Color(0.3, 0.6, 1.0, 0.0)  # Cyan, initially transparent
+	shield_effect.z_index = 1
+	shield_effect.visible = false
+	add_child(shield_effect)
+
+	# Damage smoke particles
+	damage_smoke = CPUParticles2D.new()
+	damage_smoke.emitting = false
+	damage_smoke.amount = 15
+	damage_smoke.lifetime = 1.0
+	damage_smoke.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	damage_smoke.emission_rect_extents = TANK_SIZE / 2
+	damage_smoke.direction = Vector2(0, -1)
+	damage_smoke.spread = 30
+	damage_smoke.gravity = Vector2(0, -30)
+	damage_smoke.initial_velocity_min = 20
+	damage_smoke.initial_velocity_max = 40
+	damage_smoke.scale_amount_min = 2.0
+	damage_smoke.scale_amount_max = 4.0
+	damage_smoke.color = Color(0.2, 0.2, 0.2, 0.5)
+	var smoke_gradient = Gradient.new()
+	smoke_gradient.set_color(0, Color(0.3, 0.3, 0.3, 0.6))
+	smoke_gradient.set_color(1, Color(0.1, 0.1, 0.1, 0.0))
+	damage_smoke.color_ramp = smoke_gradient
+	add_child(damage_smoke)
+
+	# Movement dust particles
+	movement_dust = CPUParticles2D.new()
+	movement_dust.emitting = false
+	movement_dust.amount = 10
+	movement_dust.lifetime = 0.4
+	movement_dust.emission_shape = CPUParticles2D.EMISSION_SHAPE_POINT
+	movement_dust.position = Vector2(0, TANK_SIZE.y / 2)  # Bottom of tank
+	movement_dust.direction = Vector2(0, 1)
+	movement_dust.spread = 45
+	movement_dust.gravity = Vector2(0, 50)
+	movement_dust.initial_velocity_min = 30
+	movement_dust.initial_velocity_max = 50
+	movement_dust.scale_amount_min = 1.0
+	movement_dust.scale_amount_max = 2.0
+	movement_dust.color = Color(0.6, 0.5, 0.4, 0.6)  # Dusty brown
+	var dust_gradient = Gradient.new()
+	dust_gradient.set_color(0, Color(0.6, 0.5, 0.4, 0.6))
+	dust_gradient.set_color(1, Color(0.5, 0.4, 0.3, 0.0))
+	movement_dust.color_ramp = dust_gradient
+	add_child(movement_dust)
 
 func set_player_info(index: int, player_name: String, color: Color) -> void:
 	"""Set tank player information"""
@@ -184,6 +238,10 @@ func move_tank(direction: float, delta: float) -> void:
 		var player_data = get_player_data()
 		player_data["fuel"] = max(0, fuel - fuel_used)
 
+	# Emit movement dust particles
+	if movement_dust and is_on_floor():
+		movement_dust.emitting = true
+
 	moved.emit(global_position)
 
 func apply_damage(amount: int) -> bool:
@@ -199,9 +257,26 @@ func apply_damage(amount: int) -> bool:
 	return false
 
 func update_health_bar() -> void:
-	"""Update health bar from GameManager state"""
+	"""Update health bar and damage visuals from GameManager state"""
+	var health = get_health()
 	if health_bar:
-		health_bar.value = get_health()
+		health_bar.value = health
+
+	# Update damage state visuals
+	var health_percent = float(health) / max_health
+
+	if body_rect:
+		# Color shift based on health (pristine → damaged → critical)
+		if health_percent > 0.66:  # Pristine (>66%)
+			body_rect.color = tank_color
+			damage_smoke.emitting = false
+		elif health_percent > 0.33:  # Damaged (33-66%)
+			body_rect.color = tank_color.lerp(Color.DARK_GRAY, 0.3)
+			damage_smoke.emitting = true
+		else:  # Critical (<33%)
+			body_rect.color = tank_color.lerp(Color.DARK_RED, 0.5)
+			damage_smoke.emitting = true
+			damage_smoke.amount = 25  # More smoke when critical
 
 func heal(amount: int) -> void:
 	"""Heal tank via GameManager"""
@@ -244,6 +319,32 @@ func destroy() -> void:
 		cannon_line.visible = false
 	if health_bar:
 		health_bar.visible = false
+
+func _process(delta: float) -> void:
+	"""Update visual effects"""
+	update_shield_visual()
+	update_movement_dust()
+
+func update_shield_visual() -> void:
+	"""Animate shield effect with pulsing"""
+	var shields = get_shields()
+
+	if shields > 0 and shield_effect:
+		shield_effect.visible = true
+		# Pulsing alpha animation
+		var time = Time.get_ticks_msec() / 1000.0
+		var pulse = (sin(time * 4.0) + 1.0) / 2.0  # Oscillates 0-1
+		var alpha = 0.2 + (pulse * 0.3)  # Range: 0.2-0.5
+		shield_effect.color.a = alpha
+	elif shield_effect:
+		shield_effect.visible = false
+
+func update_movement_dust() -> void:
+	"""Stop movement dust when not moving"""
+	if movement_dust and movement_dust.emitting:
+		# Check if tank is actually moving
+		if abs(velocity.x) < 5.0:  # Threshold for "stopped"
+			movement_dust.emitting = false
 
 func _physics_process(delta: float) -> void:
 	"""Handle tank physics"""
