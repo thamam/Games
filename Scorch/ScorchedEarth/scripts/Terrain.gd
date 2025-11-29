@@ -60,8 +60,8 @@ func generate_terrain(seed_value: int = -1) -> void:
 	# Apply midpoint displacement for interesting terrain
 	midpoint_displacement()
 
-	# Smooth the terrain
-	smooth_terrain(2)
+	# Smooth the terrain (increased to reduce spiky appearance)
+	smooth_terrain(3)
 
 	# Draw terrain based on height map
 	for x in range(terrain_width):
@@ -88,30 +88,40 @@ func generate_terrain(seed_value: int = -1) -> void:
 
 func midpoint_displacement() -> void:
 	"""Generate terrain using enhanced midpoint displacement algorithm"""
-	var segment_size = int(terrain_width / 2)  # Start with larger segments for more variation
+	# Start by setting endpoints
+	height_map[0] = base_height + randf_range(-roughness, roughness)
+	height_map[terrain_width - 1] = base_height + randf_range(-roughness, roughness)
+
+	var segment_size = terrain_width - 1
 	var variance = roughness
 
+	# Iteratively subdivide and fill all midpoints
 	while segment_size > 1:
-		for i in range(0, terrain_width - segment_size, segment_size):
+		var half_segment = int(segment_size / 2)
+
+		# Fill in all midpoints at this level
+		for i in range(0, terrain_width - 1, segment_size):
+			if i + segment_size >= terrain_width:
+				continue
+
 			var left = height_map[i]
-			var right = height_map[min(i + segment_size, terrain_width - 1)]
-			var mid_index = i + int(segment_size / 2)
+			var right = height_map[i + segment_size]
+			var mid_index = i + half_segment
 
-			if mid_index < terrain_width:
-				# Calculate midpoint with random displacement
-				var mid_height = (left + right) / 2.0
-				mid_height += randf_range(-variance, variance)
+			# Calculate midpoint with random displacement
+			var mid_height = (left + right) / 2.0
+			mid_height += randf_range(-variance, variance)
 
-				# Add occasional dramatic features (peaks and valleys)
-				if randf() < 0.15:  # 15% chance of dramatic feature
-					mid_height += randf_range(-variance * 2, variance * 2)
+			# Add occasional dramatic features (peaks and valleys)
+			if randf() < 0.15:  # 15% chance of dramatic feature
+				mid_height += randf_range(-variance * 1.5, variance * 1.5)
 
-				mid_height = clamp(mid_height, 50, terrain_height - 50)  # Allow higher/lower terrain
-				height_map[mid_index] = int(mid_height)
+			mid_height = clamp(mid_height, 100, terrain_height - 100)
+			height_map[mid_index] = int(mid_height)
 
-		# Reduce variance and segment size
-		variance *= 0.6  # Slower reduction for more variation
-		segment_size = int(segment_size / 2)
+		# Reduce variance and segment size for next iteration
+		variance *= 0.65
+		segment_size = half_segment
 
 func smooth_terrain(iterations: int = 1) -> void:
 	"""Smooth terrain using moving average"""
