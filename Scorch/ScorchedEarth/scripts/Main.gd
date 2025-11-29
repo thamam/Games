@@ -15,6 +15,7 @@ var hud: Control
 var status_label: Label
 var player_info_label: Label
 var wind_indicator: Label
+var gravity_indicator: Label  # Gravity event indicator (Phase 2.3)
 var angle_label: Label
 var power_label: Label
 var shop: Control  # Shop UI
@@ -81,6 +82,14 @@ func setup_ui() -> void:
 	wind_indicator.add_theme_color_override("font_outline_color", Color.BLACK)
 	wind_indicator.add_theme_constant_override("outline_size", 2)
 	hud.add_child(wind_indicator)
+
+	# Gravity indicator (Phase 2.3)
+	gravity_indicator = Label.new()
+	gravity_indicator.add_theme_font_size_override("font_size", 14)
+	gravity_indicator.add_theme_color_override("font_color", Color.WHITE)
+	gravity_indicator.add_theme_color_override("font_outline_color", Color.BLACK)
+	gravity_indicator.add_theme_constant_override("outline_size", 2)
+	hud.add_child(gravity_indicator)
 
 	# Control hints
 	var hints = Label.new()
@@ -408,6 +417,29 @@ func update_ui() -> void:
 
 		# Update wind particles (Phase 2.2)
 		update_wind_particles(wind, wind_strength)
+
+		# Gravity indicator (Phase 2.3)
+		var gravity_event = game_manager.gravity_event
+		var gravity_value = game_manager.current_gravity
+		var gravity_color = Color.WHITE
+		var gravity_symbol = ""
+
+		match gravity_event:
+			"Low":
+				gravity_color = Color(0.6, 0.8, 1.0)  # Light blue
+				gravity_symbol = "↓"
+			"Normal":
+				gravity_color = Color.WHITE
+				gravity_symbol = "="
+			"High":
+				gravity_color = Color(1.0, 0.8, 0.4)  # Orange
+				gravity_symbol = "↑"
+			"Extreme":
+				gravity_color = Color(1.0, 0.3, 0.3)  # Red
+				gravity_symbol = "↑↑"
+
+		gravity_indicator.text = "Gravity: %s %s (%.0f)" % [gravity_event, gravity_symbol, gravity_value]
+		gravity_indicator.add_theme_color_override("font_color", gravity_color)
 
 		# Tank status
 		if current_tank and current_tank.get_health() > 0:

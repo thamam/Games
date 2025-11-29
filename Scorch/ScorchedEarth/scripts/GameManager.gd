@@ -32,6 +32,9 @@ var current_round: int = 1
 var turn_timer: float = 0.0
 var current_wind: Vector2 = Vector2.ZERO  # Consistent wind per round
 var wind_strength: String = "Calm"  # Wind description (Phase 2.2)
+var current_gravity: float = 980.0  # Current gravity value (Phase 2.3)
+var gravity_event: String = "Normal"  # Gravity event description (Phase 2.3)
+var base_gravity: float = 980.0  # Base gravity constant
 
 ## Player Data
 var players: Array[Dictionary] = []
@@ -108,6 +111,10 @@ func start_round() -> void:
 	var wind_dir = "→" if current_wind.x > 0 else "←"
 	print("Wind: %s %s (%.1f)" % [wind_strength, wind_dir, abs(current_wind.x)])
 
+	# Set gravity for this round (Phase 2.3: Gravity Events)
+	generate_gravity()
+	print("Gravity: %s (%.0f)" % [gravity_event, current_gravity])
+
 	# Apply interest to all players
 	for player in players:
 		var interest = int(player.money * interest_rate)
@@ -160,6 +167,38 @@ func generate_wind() -> void:
 	# Set wind state
 	current_wind = Vector2(wind_speed * direction, 0.0)
 	wind_strength = selected_category.name
+
+func generate_gravity() -> void:
+	"""Generate gravity event for this round (Phase 2.3)"""
+	# Gravity categories with weighted probabilities
+	var gravity_categories = [
+		{"name": "Low", "multiplier": 0.6, "weight": 20},
+		{"name": "Normal", "multiplier": 1.0, "weight": 50},
+		{"name": "High", "multiplier": 1.4, "weight": 20},
+		{"name": "Extreme", "multiplier": 2.0, "weight": 10}
+	]
+
+	# Weighted random selection
+	var total_weight = 0
+	for category in gravity_categories:
+		total_weight += category.weight
+
+	var random_weight = randf() * total_weight
+	var accumulated_weight = 0.0
+	var selected_category = gravity_categories[1]  # Default to Normal
+
+	for category in gravity_categories:
+		accumulated_weight += category.weight
+		if random_weight <= accumulated_weight:
+			selected_category = category
+			break
+
+	# Calculate and apply gravity
+	current_gravity = base_gravity * selected_category.multiplier
+	gravity_event = selected_category.name
+
+	# Apply to physics system
+	ProjectSettings.set_setting("physics/2d/default_gravity", current_gravity)
 
 func start_playing() -> void:
 	"""Begin the playing phase"""
@@ -548,3 +587,11 @@ func get_player_by_index(index: int) -> Dictionary:
 func get_wind() -> Vector2:
 	"""Get current wind vector"""
 	return current_wind
+
+func get_gravity() -> float:
+	"""Get current gravity value (Phase 2.3)"""
+	return current_gravity
+
+func get_gravity_event() -> String:
+	"""Get current gravity event description (Phase 2.3)"""
+	return gravity_event
