@@ -60,8 +60,8 @@ func generate_terrain(seed_value: int = -1) -> void:
 	# Apply midpoint displacement for interesting terrain
 	midpoint_displacement()
 
-	# Smooth the terrain (increased to reduce spiky appearance)
-	smooth_terrain(3)
+	# Minimal smoothing to preserve dramatic features
+	smooth_terrain(1)
 
 	# Draw terrain based on height map
 	for x in range(terrain_width):
@@ -88,12 +88,12 @@ func generate_terrain(seed_value: int = -1) -> void:
 
 func midpoint_displacement() -> void:
 	"""Generate terrain using enhanced midpoint displacement algorithm"""
-	# Start by setting endpoints
-	height_map[0] = base_height + randf_range(-roughness, roughness)
-	height_map[terrain_width - 1] = base_height + randf_range(-roughness, roughness)
+	# Start by setting endpoints with variation
+	height_map[0] = base_height + randf_range(-roughness * 1.5, roughness * 1.5)
+	height_map[terrain_width - 1] = base_height + randf_range(-roughness * 1.5, roughness * 1.5)
 
 	var segment_size = terrain_width - 1
-	var variance = roughness
+	var variance = roughness * 1.5  # Increased initial variance for more dramatic terrain
 
 	# Iteratively subdivide and fill all midpoints
 	while segment_size > 1:
@@ -113,14 +113,15 @@ func midpoint_displacement() -> void:
 			mid_height += randf_range(-variance, variance)
 
 			# Add occasional dramatic features (peaks and valleys)
-			if randf() < 0.15:  # 15% chance of dramatic feature
-				mid_height += randf_range(-variance * 1.5, variance * 1.5)
+			if randf() < 0.25:  # 25% chance of dramatic feature
+				mid_height += randf_range(-variance * 2.0, variance * 2.0)
 
-			mid_height = clamp(mid_height, 100, terrain_height - 100)
+			# Wider clamp range for more varied terrain
+			mid_height = clamp(mid_height, 50, terrain_height - 50)
 			height_map[mid_index] = int(mid_height)
 
-		# Reduce variance and segment size for next iteration
-		variance *= 0.65
+		# Reduce variance more slowly to retain variation
+		variance *= 0.7
 		segment_size = half_segment
 
 func smooth_terrain(iterations: int = 1) -> void:
