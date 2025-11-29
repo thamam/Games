@@ -19,6 +19,7 @@ var angle_label: Label
 var power_label: Label
 var shop: Control  # Shop UI
 var terrain_selector: Control  # Terrain selection UI
+var wind_particles: CPUParticles2D  # Wind visual effects (Phase 2.2)
 
 ## Game state
 var current_weapon  # Weapon
@@ -104,6 +105,50 @@ func setup_ui() -> void:
 	terrain_selector.theme_selected.connect(_on_terrain_theme_selected)
 	terrain_selector.selection_cancelled.connect(_on_terrain_selection_cancelled)
 	ui.add_child(terrain_selector)
+
+	# Wind particle effects (Phase 2.2)
+	setup_wind_particles()
+
+func setup_wind_particles() -> void:
+	"""Setup wind particle effects system (Phase 2.2)"""
+	wind_particles = CPUParticles2D.new()
+
+	# Position at top center of screen
+	var viewport_size = get_viewport_rect().size
+	wind_particles.position = Vector2(viewport_size.x / 2, 50)
+
+	# Emission configuration
+	wind_particles.emitting = true
+	wind_particles.amount = 30
+	wind_particles.lifetime = 3.0
+	wind_particles.explosiveness = 0.0
+	wind_particles.randomness = 0.3
+
+	# Emission shape - wide horizontal line across screen
+	wind_particles.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	wind_particles.emission_rect_extents = Vector2(viewport_size.x / 2, 10)
+
+	# Initial particle appearance
+	wind_particles.scale_amount_min = 2.0
+	wind_particles.scale_amount_max = 4.0
+
+	# Color - will be updated based on wind
+	wind_particles.color = Color(0.9, 0.9, 0.9, 0.6)
+
+	# Gradient for fading
+	var particle_gradient = Gradient.new()
+	particle_gradient.set_color(0, Color(1, 1, 1, 0.5))
+	particle_gradient.set_color(1, Color(0.8, 0.8, 0.8, 0.0))
+	wind_particles.color_ramp = particle_gradient
+
+	# Initial direction (will be updated based on wind)
+	wind_particles.direction = Vector2(1, 0)
+	wind_particles.spread = 5.0
+	wind_particles.gravity = Vector2(0, 30)  # Slight downward drift
+	wind_particles.initial_velocity_min = 20
+	wind_particles.initial_velocity_max = 50
+
+	add_child(wind_particles)
 
 func setup_game() -> void:
 	"""Initialize game systems"""
@@ -263,6 +308,57 @@ func _process(_delta: float) -> void:
 	update_ui()
 	handle_game_input()
 
+func update_wind_particles(wind: Vector2, wind_strength: String) -> void:
+	"""Update wind particle effects based on current wind (Phase 2.2)"""
+	if not wind_particles:
+		return
+
+	# Set particle direction based on wind
+	var wind_direction = 1.0 if wind.x > 0 else -1.0
+	wind_particles.direction = Vector2(wind_direction, 0.2)  # Slight downward angle
+
+	# Adjust particle properties based on wind strength
+	match wind_strength:
+		"Calm":
+			wind_particles.amount = 15
+			wind_particles.initial_velocity_min = 10
+			wind_particles.initial_velocity_max = 30
+			wind_particles.color = Color(0.9, 0.95, 1.0, 0.3)  # Faint white-blue
+			wind_particles.scale_amount_min = 1.5
+			wind_particles.scale_amount_max = 3.0
+		"Breeze":
+			wind_particles.amount = 30
+			wind_particles.initial_velocity_min = 30
+			wind_particles.initial_velocity_max = 60
+			wind_particles.color = Color(0.8, 0.9, 1.0, 0.4)  # Light blue
+			wind_particles.scale_amount_min = 2.0
+			wind_particles.scale_amount_max = 4.0
+		"Strong":
+			wind_particles.amount = 50
+			wind_particles.initial_velocity_min = 60
+			wind_particles.initial_velocity_max = 100
+			wind_particles.color = Color(0.9, 0.85, 0.6, 0.5)  # Dusty yellow
+			wind_particles.scale_amount_min = 2.5
+			wind_particles.scale_amount_max = 5.0
+		"Storm":
+			wind_particles.amount = 80
+			wind_particles.initial_velocity_min = 100
+			wind_particles.initial_velocity_max = 150
+			wind_particles.color = Color(0.7, 0.7, 0.7, 0.6)  # Dark gray
+			wind_particles.scale_amount_min = 3.0
+			wind_particles.scale_amount_max = 6.0
+
+	# Adjust spread based on wind strength (less spread = more directional)
+	match wind_strength:
+		"Calm":
+			wind_particles.spread = 15.0
+		"Breeze":
+			wind_particles.spread = 10.0
+		"Strong":
+			wind_particles.spread = 5.0
+		"Storm":
+			wind_particles.spread = 3.0
+
 func update_ui() -> void:
 	"""Update UI elements"""
 	var GameManagerScript = load("res://scripts/GameManager.gd")
@@ -279,10 +375,39 @@ func update_ui() -> void:
 			player.shields
 		]
 
-		# Wind
+		# Wind (Phase 2.2: Enhanced visual indicator)
 		var wind = game_manager.get_wind()
-		var wind_str = "←" if wind.x < 0 else "→"
-		wind_indicator.text = "Wind: %s %.0f" % [wind_str, abs(wind.x)]
+		var wind_strength = game_manager.wind_strength
+
+		# Determine arrow count and color based on wind strength
+		var arrow_count = 1
+		var wind_color = Color.WHITE
+
+		match wind_strength:
+			"Calm":
+				arrow_count = 1
+				wind_color = Color(0.7, 0.9, 1.0)  # Light blue
+			"Breeze":
+				arrow_count = 2
+				wind_color = Color.CYAN
+			"Strong":
+				arrow_count = 3
+				wind_color = Color(1.0, 0.8, 0.0)  # Orange-yellow
+			"Storm":
+				arrow_count = 4
+				wind_color = Color(1.0, 0.3, 0.3)  # Red
+
+		# Build arrow string based on direction
+		var arrow = "←" if wind.x < 0 else "→"
+		var arrows = ""
+		for i in range(arrow_count):
+			arrows += arrow
+
+		wind_indicator.text = "Wind: %s %s (%.0f)" % [wind_strength, arrows, abs(wind.x)]
+		wind_indicator.add_theme_color_override("font_color", wind_color)
+
+		# Update wind particles (Phase 2.2)
+		update_wind_particles(wind, wind_strength)
 
 		# Tank status
 		if current_tank and current_tank.get_health() > 0:

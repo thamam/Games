@@ -31,6 +31,7 @@ var current_player_index: int = 0
 var current_round: int = 1
 var turn_timer: float = 0.0
 var current_wind: Vector2 = Vector2.ZERO  # Consistent wind per round
+var wind_strength: String = "Calm"  # Wind description (Phase 2.2)
 
 ## Player Data
 var players: Array[Dictionary] = []
@@ -102,9 +103,10 @@ func start_round() -> void:
 	"""Start a new round"""
 	print("=== Round %d Started ===" % current_round)
 
-	# Set wind for this round
-	current_wind = Vector2(randf_range(-50, 50), 0)
-	print("Wind: %.1f" % current_wind.x)
+	# Set wind for this round (Phase 2.2: Wind Variety)
+	generate_wind()
+	var wind_dir = "→" if current_wind.x > 0 else "←"
+	print("Wind: %s %s (%.1f)" % [wind_strength, wind_dir, abs(current_wind.x)])
 
 	# Apply interest to all players
 	for player in players:
@@ -123,6 +125,41 @@ func start_round() -> void:
 		start_playing()
 	else:
 		return  # Node not in tree, abort round start
+
+func generate_wind() -> void:
+	"""Generate wind with varying strength and direction (Phase 2.2)"""
+	# Wind categories based on Scorched Earth original design
+	var wind_categories = [
+		{"name": "Calm", "min": 0.0, "max": 10.0, "weight": 30},
+		{"name": "Breeze", "min": 10.0, "max": 25.0, "weight": 40},
+		{"name": "Strong", "min": 25.0, "max": 50.0, "weight": 20},
+		{"name": "Storm", "min": 50.0, "max": 80.0, "weight": 10}
+	]
+
+	# Weighted random selection of wind category
+	var total_weight = 0
+	for category in wind_categories:
+		total_weight += category.weight
+
+	var random_weight = randf() * total_weight
+	var accumulated_weight = 0.0
+	var selected_category = wind_categories[0]
+
+	for category in wind_categories:
+		accumulated_weight += category.weight
+		if random_weight <= accumulated_weight:
+			selected_category = category
+			break
+
+	# Generate wind speed within category range
+	var wind_speed = randf_range(selected_category.min, selected_category.max)
+
+	# Randomly choose direction (50% left, 50% right)
+	var direction = 1.0 if randf() > 0.5 else -1.0
+
+	# Set wind state
+	current_wind = Vector2(wind_speed * direction, 0.0)
+	wind_strength = selected_category.name
 
 func start_playing() -> void:
 	"""Begin the playing phase"""
