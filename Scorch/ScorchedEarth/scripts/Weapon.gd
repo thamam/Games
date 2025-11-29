@@ -26,6 +26,7 @@ class_name Weapon
 @export var is_cluster_bomb: bool = false
 @export var is_guided: bool = false
 @export var heat_seeking: bool = false
+@export var is_roller: bool = false
 @export var splits_count: int = 0
 
 func create_projectile():
@@ -42,6 +43,8 @@ func create_projectile():
 		projectile = ProjectileScript.GuidedMissileProjectile.new()
 	elif heat_seeking:
 		projectile = ProjectileScript.HeatSeekingProjectile.new()
+	elif is_roller:
+		projectile = ProjectileScript.RollerProjectile.new()
 	else:
 		projectile = ProjectileScript.new()
 
@@ -227,6 +230,7 @@ static func create_roller():
 	w.cost = 800
 	w.damage = 40
 	w.explosion_radius = 30.0
+	w.is_roller = true
 	w.gravity_scale = 2.0
 	w.max_bounces = 5
 	w.bounce_factor = 0.8

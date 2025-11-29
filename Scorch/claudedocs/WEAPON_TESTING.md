@@ -91,9 +91,9 @@ MIRV splitting into 5 warheads!
 
 ### Roller (Rolling Bomb)
 
-**Status**: 🚧 Partially implemented, needs rolling physics
+**Status**: ✅ Code complete, needs testing
 
-**Implementation**: Weapon definition exists (Weapon.gd:185-198)
+**Implementation**: Projectile.gd:714-828 (RollerProjectile class)
 
 **Properties**:
 - Cost: $800
@@ -104,13 +104,25 @@ MIRV splitting into 5 warheads!
 - Bounce Factor: 0.8
 - Color: Green
 
-**Expected Behavior** (TO IMPLEMENT):
+**Behavior**:
 1. Fires as green projectile with 2x gravity
-2. On terrain contact → rolls down slopes
-3. Detects terrain normal to determine downhill direction
-4. Applies rolling force based on slope angle
-5. Bounces up to 5 times while rolling
-6. Explodes after velocity drops below threshold OR max bounces
+2. After first bounce → starts rolling mode
+3. Detects terrain slope using surface normal
+4. Applies rolling force down slopes (faster on steeper slopes)
+5. Slope factor: sin(slope_angle) × 200 × 1.5 multiplier
+6. Bounces up to 5 times while rolling
+7. Explodes when velocity drops below 50 units/s OR max bounces
+8. Damping (0.95) prevents infinite acceleration
+
+**Test Procedure**:
+```
+1. Purchase Roller ($800) from shop
+2. Fire at mountainous terrain with slopes
+3. Watch projectile bounce and start rolling
+4. Observe it accelerate down slopes
+5. Verify it slows down on flat/uphill terrain
+6. Confirm explosion after stopping or max bounces
+```
 
 ---
 

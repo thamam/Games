@@ -52,18 +52,19 @@ Based on GDD requirements, here are all missing features organized by priority a
 - [x] ✅ Funky Bomb (cluster bomb scatters 8 submunitions - Projectile.gd:451-522)
 - [x] ✅ Guided Missile (player-controlled flight with arrow keys - Projectile.gd:525-600)
 - [x] ✅ Heat Seeker (tracks nearest tank for 5 seconds - Projectile.gd:603-711)
+- [x] ✅ Roller (rolls down slopes using terrain physics - Projectile.gd:714-828)
 
 **Remaining Weapon Types**:
-- [ ] Roller (rolls down slopes with multiple bounces)
 - [ ] Leapfrog (bouncing bomb) - Partially implemented, needs testing
 - [ ] Sandhog (large terrain removal)
+- [ ] Additional weapon variants (Baby versions, special effects)
 
 **Implementation Tasks** (2025-11-29 Update):
 1. ✅ Enable MIRV projectile spawning (COMPLETE - splits into 5 submunitions at apex)
 2. ✅ Implement cluster bomb mechanics (COMPLETE - Funky Bomb scatters 8 submunitions)
 3. ✅ Add guided missile control system (COMPLETE - arrow keys for 3 seconds of control)
 4. ✅ Add heat-seeking logic (COMPLETE - tracks nearest tank with 150°/s turn rate)
-5. ⏳ Implement rolling physics (Roller weapon - pending)
+5. ✅ Implement rolling physics (COMPLETE - Roller uses slope detection and physics)
 6. ⏳ Test all weapons for balance and functionality (pending manual testing)
 7. ✅ Add weapon-specific visual effects (COMPLETE - unique colors per weapon type)
 
@@ -81,11 +82,13 @@ Based on GDD requirements, here are all missing features organized by priority a
 ```
 
 **Acceptance Criteria**:
-- ✅ 17/20+ weapons implemented (13 existing + 4 new advanced weapons)
-- ✅ Each weapon has distinct behavior (MIRV splits, Funky clusters, Guided/Heat-seeking)
+- ✅ 18/20+ weapons implemented (13 existing + 5 new advanced weapons)
+- ✅ Each weapon has distinct behavior (MIRV splits, Funky clusters, Guided/Heat-seeking, Roller physics)
 - ✅ Damage values configured per weapon type
-- ✅ Visual feedback clear (unique colors: Cyan=MIRV, Magenta=Funky, Gold=Guided, Orange=Heat-Seeker)
+- ✅ Visual feedback clear (Cyan=MIRV, Magenta=Funky, Gold=Guided, Orange=Heat-Seeker, Green=Roller)
 - ⏳ Needs manual testing and balance tuning
+
+**Phase 1.1 Core Implementation**: ✅ COMPLETE (5/5 major advanced weapons implemented)
 
 ---
 

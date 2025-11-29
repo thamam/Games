@@ -709,3 +709,120 @@ class HeatSeekingProjectile extends Projectile:
 		var max_speed = 500.0
 		if velocity.length() > max_speed:
 			velocity = velocity.normalized() * max_speed
+
+
+class RollerProjectile extends Projectile:
+	"""Rolling bomb that follows terrain slopes"""
+
+	var is_rolling: bool = false
+	var roll_speed_multiplier: float = 1.5
+	var min_roll_velocity: float = 50.0  # Stop rolling below this speed
+
+	func _init() -> void:
+		damage = 40
+		explosion_radius = 30.0
+		projectile_color = Color.GREEN
+		gravity_scale = 2.0  # Heavy projectile
+		max_bounces = 5
+		bounce_factor = 0.8
+		detonation_timer = 20.0
+
+	func handle_collision(collision: KinematicCollision2D) -> void:
+		"""Override collision handling to enable rolling on terrain"""
+		var collider = collision.get_collider()
+
+		# Check if hit tank - explode immediately
+		if collider and collider.has_method("get_health"):
+			explode()
+			hit_tank.emit(collider)
+			return
+
+		# Check if can bounce
+		if bounces_remaining > 0:
+			bounces_remaining -= 1
+			is_rolling = true  # Start rolling after first bounce
+
+			# Reflect velocity
+			var normal = collision.get_normal()
+			velocity = velocity.bounce(normal) * bounce_factor
+
+			print("Roller bounced! (%d bounces left)" % bounces_remaining)
+		else:
+			# No bounces left - explode
+			explode()
+
+	func _physics_process(delta: float) -> void:
+		if has_exploded:
+			return
+
+		time_alive += delta
+
+		# Auto-detonate after timer expires
+		if time_alive >= detonation_timer:
+			explode()
+			return
+
+		# Apply rolling behavior when on ground
+		if is_rolling and is_on_floor():
+			apply_rolling_physics(delta)
+		else:
+			# Normal projectile physics
+			var gravity = ProjectSettings.get_setting("physics/2d/default_gravity") * gravity_scale
+			velocity.y += gravity * delta
+
+			# Apply wind
+			velocity.x += wind_vector.x * wind_resistance * delta
+
+		# Check if velocity too low - explode
+		if is_rolling and velocity.length() < min_roll_velocity:
+			explode()
+			return
+
+		# Store previous position for trail
+		var previous_pos = global_position
+
+		# Move projectile
+		var collision = move_and_collide(velocity * delta)
+
+		# Update trail
+		add_trail_point(previous_pos)
+
+		# Check collision
+		if collision:
+			handle_collision(collision)
+		else:
+			# Check if hit terrain (pixel-perfect)
+			if terrain and terrain.is_solid_at(global_position):
+				explode()
+
+	func apply_rolling_physics(delta: float) -> void:
+		"""Apply physics for rolling down slopes"""
+		if not terrain:
+			return
+
+		# Get surface normal at current position
+		var surface_normal = terrain.get_surface_normal(global_position.x)
+
+		# Calculate downhill direction (perpendicular to normal)
+		var downhill = Vector2(surface_normal.y, -surface_normal.x)
+
+		# Determine if sloping down to right or left
+		if downhill.y > 0:  # Sloping down
+			# Apply rolling force down the slope
+			var slope_angle = surface_normal.angle_to(Vector2.UP)
+			var slope_factor = abs(sin(slope_angle))
+
+			# Roll faster on steeper slopes
+			var roll_force = slope_factor * 200.0 * roll_speed_multiplier
+
+			# Apply force in downhill direction
+			velocity.x += downhill.x * roll_force * delta
+
+			# Damping to prevent infinite acceleration
+			velocity.x *= 0.95
+		else:
+			# On flat or uphill - slow down
+			velocity.x *= 0.9
+
+		# Keep vertical velocity near zero when rolling on ground
+		velocity.y = 0
