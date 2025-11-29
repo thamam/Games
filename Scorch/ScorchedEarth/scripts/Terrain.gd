@@ -31,7 +31,6 @@ var terrain_image: Image
 var terrain_texture: ImageTexture
 var terrain_sprite: Sprite2D
 var collision_body: StaticBody2D  # Track the physics body
-var collision_shape: CollisionPolygon2D
 
 ## Height map for quick access
 var height_map: PackedInt32Array
@@ -136,43 +135,43 @@ func smooth_terrain(iterations: int = 1) -> void:
 		height_map = new_heights
 
 func setup_collision() -> void:
-	"""Create collision shape for terrain based on height map"""
+	"""Create collision shape for terrain using segments to avoid convex decomposition"""
 	# Remove old collision body if exists
 	if collision_body:
 		collision_body.queue_free()
 		collision_body = null
-		collision_shape = null
 
 	# Create StaticBody2D for terrain collision
 	collision_body = StaticBody2D.new()
 	add_child(collision_body)
 
-	# Create collision polygon
-	collision_shape = CollisionPolygon2D.new()
-	collision_body.add_child(collision_shape)
+	# Use segment-based collision instead of polygon to avoid "Convex decomposing failed!"
+	# Create collision segments connecting surface points
+	var segment_width = 8  # Width of each segment (pixels)
+	var segment_count = 0
 
-	# Build polygon from height map (simplified to prevent convex decomposition failure)
-	var polygon_points = PackedVector2Array()
+	for x in range(0, terrain_width - segment_width, segment_width):
+		# Get heights at segment start and end
+		var h1 = height_map[x]
+		var h2 = height_map[min(x + segment_width, terrain_width - 1)]
 
-	# Sample every N pixels to reduce polygon complexity (prevents "Convex decomposing failed!")
-	var sample_rate = 4  # Sample every 4 pixels to reduce points from 1280 to ~320
+		# Create a small rectangular collision shape for this segment
+		var segment_shape = CollisionShape2D.new()
+		var rect_shape = RectangleShape2D.new()
 
-	# Start from bottom-left
-	polygon_points.append(Vector2(0, terrain_height))
+		# Calculate segment dimensions and position
+		var segment_height = 20.0  # Thickness below surface
+		var avg_height = (h1 + h2) / 2.0
+		var segment_center = Vector2(x + segment_width / 2.0, avg_height + segment_height / 2.0)
 
-	# Follow the terrain surface with sampling
-	for x in range(0, terrain_width, sample_rate):
-		polygon_points.append(Vector2(x, height_map[x]))
+		rect_shape.size = Vector2(segment_width, segment_height)
+		segment_shape.position = segment_center
+		segment_shape.shape = rect_shape
 
-	# Add final point if not already added
-	if (terrain_width - 1) % sample_rate != 0:
-		polygon_points.append(Vector2(terrain_width - 1, height_map[terrain_width - 1]))
+		collision_body.add_child(segment_shape)
+		segment_count += 1
 
-	# Complete the polygon: right edge down, bottom edge left
-	polygon_points.append(Vector2(terrain_width - 1, terrain_height))
-
-	collision_shape.polygon = polygon_points
-	print("Collision shape created with %d points (sampled at 1:%d)" % [polygon_points.size(), sample_rate])
+	print("Collision created with %d segments" % segment_count)
 
 func destroy_terrain(pos: Vector2, radius: float, add_dirt: bool = false) -> void:
 	"""Destroy (or add) terrain at position with given radius"""
