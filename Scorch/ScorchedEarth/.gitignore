@@ -4,6 +4,10 @@
 export.cfg
 export_presets.cfg
 
+# Godot UID cache files (auto-generated)
+*.uid
+*.import
+
 # Imported translations (automatically generated from CSV files)
 *.translation
 
