@@ -153,7 +153,7 @@ func handle_ai_turn() -> void:
 	var current_tank = tanks[current_player_index]
 
 	# AI shopping phase (if has money and needs weapons/items)
-	await ai_shopping_phase(current_player)
+	ai_shopping_phase(current_player)
 
 	# AI "thinking" time (varies by difficulty)
 	var think_time = 1.5 - (current_player.ai_level * 0.3)  # Harder AI thinks faster
@@ -276,7 +276,7 @@ func ai_select_target(player: Dictionary) -> int:
 
 	return valid_targets[0]
 
-func ai_select_weapon(player: Dictionary, target_tank) -> String:
+func ai_select_weapon(player: Dictionary, _target_tank) -> String:
 	"""Select appropriate weapon from inventory"""
 	# If has special weapons in inventory, use strategically
 	if player.inventory.has("heat_seeker") and player.inventory["heat_seeker"] > 0:
@@ -299,8 +299,8 @@ func ai_calculate_shot(player: Dictionary, from_tank, to_tank) -> Dictionary:
 	var start_pos = from_tank.global_position
 	var target_pos = to_tank.global_position
 
-	var dx = target_pos.x - start_pos.x
-	var dy = target_pos.y - start_pos.y
+	var _dx = target_pos.x - start_pos.x
+	var _dy = target_pos.y - start_pos.y
 
 	# Get gravity and wind
 	var gravity = ProjectSettings.get_setting("physics/2d/default_gravity")

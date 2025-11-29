@@ -320,7 +320,7 @@ func destroy() -> void:
 	if health_bar:
 		health_bar.visible = false
 
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
 	"""Update visual effects"""
 	update_shield_visual()
 	update_movement_dust()

@@ -206,7 +206,7 @@ func _on_game_over(winner_index: int) -> void:
 	await get_tree().create_timer(3.0).timeout
 	print("\nPress R to restart or ESC to quit")
 
-func _on_tank_fired(weapon_type: String, angle: float, power: float, player_index: int) -> void:
+func _on_tank_fired(_weapon_type: String, _angle: float, _power: float, player_index: int) -> void:
 	"""Handle tank firing weapon"""
 	var tank = game_manager.tanks[player_index]
 
@@ -235,10 +235,10 @@ func _on_tank_fired(weapon_type: String, angle: float, power: float, player_inde
 	# End turn
 	game_manager.end_turn()
 
-func _on_projectile_exploded(position: Vector2, damage: int, radius: float) -> void:
+func _on_projectile_exploded(pos: Vector2, damage: int, radius: float) -> void:
 	"""Handle projectile explosion"""
 	print("Explosion at %.0f,%.0f (damage: %d, radius: %.0f)" % [
-		position.x, position.y, damage, radius
+		pos.x, pos.y, damage, radius
 	])
 
 func _on_tank_destroyed(player_index: int) -> void:

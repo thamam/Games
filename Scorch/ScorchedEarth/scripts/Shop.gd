@@ -32,6 +32,7 @@ func setup_ui() -> void:
 	# Set control to fill viewport
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
+	focus_mode = Control.FOCUS_ALL  # Enable focus for this control
 
 	# Semi-transparent background
 	var bg = ColorRect.new()

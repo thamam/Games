@@ -371,7 +371,7 @@ func on_fired() -> void:
 	"""Called when projectile is fired (for special weapons)"""
 	pass
 
-func update_behavior(delta: float) -> void:
+func update_behavior(_delta: float) -> void:
 	"""Custom update behavior for special weapons"""
 	pass
 

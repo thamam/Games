@@ -152,10 +152,10 @@ func setup_collision() -> void:
 	collision_shape.polygon = polygon_points
 	print("Collision shape created with %d points" % polygon_points.size())
 
-func destroy_terrain(position: Vector2, radius: float, add_dirt: bool = false) -> void:
+func destroy_terrain(pos: Vector2, radius: float, add_dirt: bool = false) -> void:
 	"""Destroy (or add) terrain at position with given radius"""
-	var center_x = int(position.x)
-	var center_y = int(position.y)
+	var center_x = int(pos.x)
+	var center_y = int(pos.y)
 
 	# Calculate bounds
 	var min_x = max(0, center_x - int(radius))
@@ -219,10 +219,10 @@ func get_height_at(x: float) -> float:
 		return height_map[ix]
 	return terrain_height
 
-func is_solid_at(position: Vector2) -> bool:
+func is_solid_at(pos: Vector2) -> bool:
 	"""Check if position is solid terrain"""
-	var x = int(position.x)
-	var y = int(position.y)
+	var x = int(pos.x)
+	var y = int(pos.y)
 
 	if x < 0 or x >= terrain_width or y < 0 or y >= terrain_height:
 		return false
