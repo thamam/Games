@@ -10,9 +10,13 @@ signal terrain_modified()
 @export var terrain_width: int = 1280
 @export var terrain_height: int = 720
 @export var base_height: int = 500
-@export var roughness: float = 80.0  # Increased for more dramatic terrain
+@export var amplitude: float = 150.0  # Vertical variation amplitude
+@export var octaves: int = 4  # Number of noise layers for detail
 @export var terrain_color: Color = Color(0.6, 0.4, 0.2)  # Brown
 @export var sky_color: Color = Color(0.3, 0.5, 0.8)  # Blue
+
+## Noise generator for fractal terrain
+var noise: FastNoiseLite
 
 ## Theme Configuration
 enum TerrainTheme {
@@ -39,9 +43,23 @@ func _ready() -> void:
 	generate_terrain()
 
 func generate_terrain(seed_value: int = -1) -> void:
-	"""Generate procedural terrain using Perlin-like noise"""
+	"""Generate procedural terrain using fractal Perlin noise"""
+	# Initialize noise generator
+	if not noise:
+		noise = FastNoiseLite.new()
+
 	if seed_value > 0:
-		seed(seed_value)
+		noise.seed = seed_value
+	else:
+		noise.seed = randi()
+
+	# Configure noise for terrain generation
+	noise.noise_type = FastNoiseLite.TYPE_PERLIN
+	noise.fractal_type = FastNoiseLite.FRACTAL_FBM  # Fractional Brownian Motion
+	noise.fractal_octaves = octaves  # Number of detail layers
+	noise.fractal_lacunarity = 2.0  # Frequency multiplier per octave (doubles each octave)
+	noise.fractal_gain = 0.5  # Amplitude multiplier per octave (halves each octave)
+	noise.frequency = 0.003  # Base frequency (lower = larger features)
 
 	# Create terrain image
 	terrain_image = Image.create(terrain_width, terrain_height, false, Image.FORMAT_RGBA8)
@@ -49,19 +67,33 @@ func generate_terrain(seed_value: int = -1) -> void:
 	# Fill with sky color first
 	terrain_image.fill(sky_color)
 
-	# Generate height map using midpoint displacement
+	# Generate height map using fractal noise
 	height_map = PackedInt32Array()
 	height_map.resize(terrain_width)
 
-	# Initialize with base height
+	# Generate terrain using fractal noise: H(x) = Σ A_i * noise(Frequency_i * x)
+	var min_height = INF
+	var max_height = -INF
+
 	for x in range(terrain_width):
-		height_map[x] = base_height
+		# Get noise value (-1 to 1)
+		var noise_value = noise.get_noise_1d(x)
 
-	# Apply midpoint displacement for interesting terrain
-	midpoint_displacement()
+		# Convert to height using amplitude
+		var height = base_height + (noise_value * amplitude)
 
-	# Minimal smoothing to preserve dramatic features
-	smooth_terrain(1)
+		# Track min/max for normalization
+		min_height = min(min_height, height)
+		max_height = max(max_height, height)
+
+		height_map[x] = int(height)
+
+	# Normalize heights to use full terrain range effectively
+	var height_range = max_height - min_height
+	for x in range(terrain_width):
+		var normalized = (height_map[x] - min_height) / height_range
+		# Map to terrain range with some margin
+		height_map[x] = int(100 + normalized * (terrain_height - 200))
 
 	# Draw terrain based on height map
 	for x in range(terrain_width):
@@ -84,66 +116,8 @@ func generate_terrain(seed_value: int = -1) -> void:
 	# Create collision for terrain
 	setup_collision()
 
-	print("Terrain generated: %dx%d" % [terrain_width, terrain_height])
+	print("Terrain generated: %dx%d (Fractal Noise)" % [terrain_width, terrain_height])
 
-func midpoint_displacement() -> void:
-	"""Generate terrain using enhanced midpoint displacement algorithm"""
-	# Start by setting endpoints with variation
-	height_map[0] = base_height + randf_range(-roughness * 1.5, roughness * 1.5)
-	height_map[terrain_width - 1] = base_height + randf_range(-roughness * 1.5, roughness * 1.5)
-
-	var segment_size = terrain_width - 1
-	var variance = roughness * 1.5  # Increased initial variance for more dramatic terrain
-
-	# Iteratively subdivide and fill all midpoints
-	while segment_size > 1:
-		var half_segment = int(segment_size / 2)
-
-		# Fill in all midpoints at this level
-		for i in range(0, terrain_width - 1, segment_size):
-			if i + segment_size >= terrain_width:
-				continue
-
-			var left = height_map[i]
-			var right = height_map[i + segment_size]
-			var mid_index = i + half_segment
-
-			# Calculate midpoint with random displacement
-			var mid_height = (left + right) / 2.0
-			mid_height += randf_range(-variance, variance)
-
-			# Add occasional dramatic features (peaks and valleys)
-			if randf() < 0.25:  # 25% chance of dramatic feature
-				mid_height += randf_range(-variance * 2.0, variance * 2.0)
-
-			# Wider clamp range for more varied terrain
-			mid_height = clamp(mid_height, 50, terrain_height - 50)
-			height_map[mid_index] = int(mid_height)
-
-		# Reduce variance more slowly to retain variation
-		variance *= 0.7
-		segment_size = half_segment
-
-func smooth_terrain(iterations: int = 1) -> void:
-	"""Smooth terrain using moving average"""
-	for _iter in range(iterations):
-		var new_heights = PackedInt32Array()
-		new_heights.resize(terrain_width)
-
-		for x in range(terrain_width):
-			var sum = 0
-			var count = 0
-
-			# Average with neighbors
-			for dx in range(-1, 2):
-				var nx = x + dx
-				if nx >= 0 and nx < terrain_width:
-					sum += height_map[nx]
-					count += 1
-
-			new_heights[x] = int(sum / count)
-
-		height_map = new_heights
 
 func setup_collision() -> void:
 	"""Create collision shape for terrain using segments to avoid convex decomposition"""
@@ -357,9 +331,9 @@ func set_theme(theme: TerrainTheme) -> void:
 	sky_color = info.sky_color
 	theme_gravity_multiplier = info.gravity_multiplier
 
-	# Adjust roughness based on theme
-	var base_roughness = 80.0
-	roughness = base_roughness * info.roughness_modifier
+	# Adjust amplitude based on theme (renamed from roughness_modifier)
+	var base_amplitude = 150.0
+	amplitude = base_amplitude * info.roughness_modifier
 
 	# Apply gravity to physics system
 	var base_gravity = 980.0
