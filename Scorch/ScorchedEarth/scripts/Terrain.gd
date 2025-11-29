@@ -151,21 +151,28 @@ func setup_collision() -> void:
 	collision_shape = CollisionPolygon2D.new()
 	collision_body.add_child(collision_shape)
 
-	# Build polygon from height map
+	# Build polygon from height map (simplified to prevent convex decomposition failure)
 	var polygon_points = PackedVector2Array()
+
+	# Sample every N pixels to reduce polygon complexity (prevents "Convex decomposing failed!")
+	var sample_rate = 4  # Sample every 4 pixels to reduce points from 1280 to ~320
 
 	# Start from bottom-left
 	polygon_points.append(Vector2(0, terrain_height))
 
-	# Follow the terrain surface
-	for x in range(terrain_width):
+	# Follow the terrain surface with sampling
+	for x in range(0, terrain_width, sample_rate):
 		polygon_points.append(Vector2(x, height_map[x]))
+
+	# Add final point if not already added
+	if (terrain_width - 1) % sample_rate != 0:
+		polygon_points.append(Vector2(terrain_width - 1, height_map[terrain_width - 1]))
 
 	# Complete the polygon: right edge down, bottom edge left
 	polygon_points.append(Vector2(terrain_width - 1, terrain_height))
 
 	collision_shape.polygon = polygon_points
-	print("Collision shape created with %d points" % polygon_points.size())
+	print("Collision shape created with %d points (sampled at 1:%d)" % [polygon_points.size(), sample_rate])
 
 func destroy_terrain(pos: Vector2, radius: float, add_dirt: bool = false) -> void:
 	"""Destroy (or add) terrain at position with given radius"""
